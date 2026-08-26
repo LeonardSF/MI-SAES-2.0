@@ -46,7 +46,7 @@
   border-block-end: 0;
 }
 
-@container (min-width: 40rem) {
+@container (min-width: 640px) {
   .ms-trajectory-home-surface .ms-trajectory-metrics {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
@@ -74,7 +74,7 @@
   }
 }
 
-@container (max-width: 30rem) {
+@container (max-width: 480px) {
   .ms-trajectory-home-surface .ms-trajectory-metric,
   .ms-trajectory-home-surface .ms-trajectory-metric:nth-child(odd),
   .ms-trajectory-home-surface .ms-trajectory-metric:nth-child(even) {
@@ -110,7 +110,7 @@
 }
 
 .ms-trajectory-disclosure__summary {
-  min-height: 2.75rem;
+  min-height: 44px;
   padding-block: var(--space-sm);
   color: var(--color-accent);
   cursor: pointer;
@@ -130,7 +130,7 @@
   margin-block-start: var(--space-xs);
 }
 
-@media (max-width: 30rem) {
+@media (max-width: 480px) {
   .ms-trajectory-home-surface {
     margin-block: var(--space-lg);
     padding: var(--space-md);

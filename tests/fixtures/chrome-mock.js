@@ -4,7 +4,7 @@ const localState = {};
 const changeListeners = [];
 
 if (new URLSearchParams(location.search).has("release-preview")) {
-  localState.releaseNotice = { version: "0.12.3", previousVersion: "0.12.2" };
+  localState.releaseNotice = { version: "0.12.4", previousVersion: "0.12.3" };
 }
 
 globalThis.chrome = {
@@ -39,7 +39,7 @@ globalThis.chrome = {
   },
   runtime: {
     getManifest() {
-      return { version: "0.12.3" };
+      return { version: "0.12.4" };
     },
     getURL(resource) {
       return `/${resource}`;

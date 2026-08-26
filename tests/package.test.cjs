@@ -7,7 +7,7 @@ const root = path.resolve(__dirname, "..");
 
 test("el paquete distribuible incluye la licencia y excluye archivos de desarrollo", () => {
   execFileSync(process.execPath, ["scripts/package.cjs"], { cwd: root, stdio: "pipe" });
-  const archive = path.join(root, "dist", "mi-saes-2.0-0.12.3.zip");
+  const archive = path.join(root, "dist", "mi-saes-2.0-0.12.4.zip");
   try {
     const entries = execFileSync("unzip", ["-Z1", archive], { encoding: "utf8" })
       .trim()

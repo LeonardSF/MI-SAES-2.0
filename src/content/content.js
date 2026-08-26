@@ -89,7 +89,8 @@
   let activeGeneratedSchedule = 0;
   const isOfferingsCatalog = /\/academica\/horarios\.aspx$/i.test(location.pathname) || (isLocalPreview && /\/saes-schedule\.html$/i.test(location.pathname));
   const isReenrollmentPage = /\/alumnos\/reinscripciones\//i.test(location.pathname) || context === "reenrollment";
-  const extensionVersion = chrome.runtime.getManifest?.().version || "0.12.3";
+  const extensionVersion = chrome.runtime.getManifest?.().version || "0.12.4";
+  const launcherCopy = core.launcherModel({ authenticated: hasAuthenticatedSession });
   let releaseNotice = storedState[releaseNoticeKey] || null;
   let isOpen = false;
   let activeView = "schedule";
@@ -110,14 +111,14 @@
   app.className = "ms-app";
   app.dataset.open = "false";
   app.innerHTML = `
-    <button class="ms-launcher" type="button" aria-label="Abrir MI SAES 2.0: arma tu horario sin empalmes" aria-expanded="false">
+    <button class="ms-launcher" type="button" aria-label="${launcherCopy.ariaLabel}" aria-expanded="false">
       <span class="ms-launcher__mark" aria-hidden="true">
         <img class="ms-launcher__icon" src="${chrome.runtime.getURL("assets/icon-misaes-calendar-candidate.png")}" alt="" width="44" height="44">
         <span class="ms-launcher__dot"></span>
       </span>
       <span class="ms-launcher__copy">
-        <strong class="ms-launcher__title">MI SAES 2.0</strong>
-        <span class="ms-launcher__message">Arma tu horario sin empalmes</span>
+        <strong class="ms-launcher__title">${launcherCopy.title}</strong>
+        <span class="ms-launcher__message">${launcherCopy.message}</span>
       </span>
     </button>
     <section class="ms-panel" role="dialog" aria-modal="true" aria-labelledby="ms-title" aria-hidden="true">

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="es" style="font-size: 10px">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SAES con raíz tipográfica reducida</title>
+  </head>
+  <body>
+    <output id="result">pendiente</output>
+    <script>
+      const host = document.createElement("div");
+      host.id = "misaes-root";
+      const shadow = host.attachShadow({ mode: "open" });
+      const stylesheet = document.createElement("style");
+      stylesheet.textContent = __MI_SAES_STYLES__;
+      const app = document.createElement("div");
+      app.className = "ms-app";
+      app.innerHTML = `
+        <button class="ms-launcher" type="button">
+          <span class="ms-launcher__mark">
+            <span class="ms-launcher__icon"></span>
+          </span>
+          <span class="ms-launcher__copy">
+            <strong class="ms-launcher__title">MI SAES 2.0</strong>
+            <span class="ms-launcher__message">Inicia sesión para continuar</span>
+          </span>
+        </button>
+      `;
+      shadow.append(stylesheet, app);
+      document.documentElement.append(host);
+      const launcher = shadow.querySelector(".ms-launcher").getBoundingClientRect();
+      const icon = shadow.querySelector(".ms-launcher__mark").getBoundingClientRect();
+      document.getElementById("result").textContent = JSON.stringify({
+        rootFontSize: getComputedStyle(document.documentElement).fontSize,
+        launcherHeight: launcher.height,
+        iconWidth: icon.width
+      });
+    </script>
+  </body>
+</html>

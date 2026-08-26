@@ -21,6 +21,19 @@ test("detecta las secciones principales de SAES", () => {
   }), "schedule");
 });
 
+test("adapta la invitación de acceso al estado de la sesión", () => {
+  assert.deepEqual(core.launcherModel({ authenticated: false }), {
+    title: "MI SAES 2.0",
+    message: "Inicia sesión para continuar",
+    ariaLabel: "MI SAES 2.0: inicia sesión en SAES para continuar"
+  });
+  assert.deepEqual(core.launcherModel({ authenticated: true }), {
+    title: "MI SAES 2.0",
+    message: "Arma tu horario sin empalmes",
+    ariaLabel: "Abrir MI SAES 2.0: arma tu horario sin empalmes"
+  });
+});
+
 test("descarta la preferencia heredada del asistente de evaluación", () => {
   const settings = core.mergeSettings({
     modules: { evaluationAssist: true }
@@ -29,17 +42,15 @@ test("descarta la preferencia heredada del asistente de evaluación", () => {
   assert.equal(Object.hasOwn(settings.modules, "evaluationAssist"), false);
 });
 
-test("describe las novedades verificadas de la versión 0.12.3", () => {
-  assert.deepEqual(core.releaseNotes("0.12.3"), {
-    version: "0.12.3",
+test("describe las novedades verificadas de la versión 0.12.4", () => {
+  assert.deepEqual(core.releaseNotes("0.12.4"), {
+    version: "0.12.4",
     title: "MI SAES se actualizó",
     items: [
-      "MI SAES 2.0 ahora es un proyecto de código abierto.",
-      "El repositorio incluye guías para contribuir y reportar problemas con seguridad.",
-      "Los ejemplos de SAES usan datos ficticios para proteger la privacidad.",
-      "Mejoras de documentación para estudiantes y personas desarrolladoras."
+      "MI SAES conserva su tamaño aunque el portal use estilos tipográficos antiguos.",
+      "El acceso público ahora indica claramente que debes iniciar sesión para continuar."
     ],
-    releaseUrl: "https://github.com/LeonardSF/MI-SAES-2.0/releases/tag/v0.12.3"
+    releaseUrl: "https://github.com/LeonardSF/MI-SAES-2.0/releases/tag/v0.12.4"
   });
   assert.equal(core.releaseNotes("9.9.9"), null);
 });
@@ -47,13 +58,13 @@ test("describe las novedades verificadas de la versión 0.12.3", () => {
 test("crea un aviso sólo cuando Chrome actualiza a una versión con novedades", () => {
   assert.deepEqual(core.releaseNoticeForInstall({
     reason: "update",
-    previousVersion: "0.12.1",
-    currentVersion: "0.12.3"
+    previousVersion: "0.12.3",
+    currentVersion: "0.12.4"
   }), {
-    version: "0.12.3",
-    previousVersion: "0.12.1"
+    version: "0.12.4",
+    previousVersion: "0.12.3"
   });
-  assert.equal(core.releaseNoticeForInstall({ reason: "install", currentVersion: "0.12.3" }), null);
+  assert.equal(core.releaseNoticeForInstall({ reason: "install", currentVersion: "0.12.4" }), null);
   assert.equal(core.releaseNoticeForInstall({ reason: "update", currentVersion: "9.9.9" }), null);
 });
 

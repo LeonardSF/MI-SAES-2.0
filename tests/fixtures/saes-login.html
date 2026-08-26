@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="es" style="font-size: 10px">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>IPN-SAES-ESIME CULHUACÁN</title>
+    <link rel="stylesheet" href="/src/content/page.css">
+    <style>
+      body {
+        margin: 0;
+        background: #f3f3f3;
+        color: #222;
+        font: 18px Arial, sans-serif;
+      }
+
+      .saes-preview {
+        width: min(960px, calc(100% - 32px));
+        margin: 32px auto;
+      }
+
+      .saes-preview header {
+        padding: 16px;
+        background: #750946;
+        color: white;
+      }
+
+      .saes-login {
+        width: min(360px, 100%);
+        margin: 48px auto;
+        padding: 24px;
+        border: 1px solid #bbb;
+        background: white;
+      }
+
+      .saes-login label,
+      .saes-login input,
+      .saes-login button {
+        display: block;
+        width: 100%;
+        margin-top: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="saes-preview">
+      <header>Sistema de Administración Escolar</header>
+      <main class="saes-login">
+        <h1>Iniciar Sesión</h1>
+        <label for="usuario">Usuario</label>
+        <input id="usuario" autocomplete="username">
+        <label for="password">Password</label>
+        <input id="password" type="password" autocomplete="current-password">
+        <label for="captcha">Captcha</label>
+        <input id="captcha">
+        <button type="button">Iniciar</button>
+      </main>
+    </div>
+    <script src="/tests/fixtures/chrome-mock.js"></script>
+    <script src="/src/shared/core.js"></script>
+    <script src="/src/content/scanner.js"></script>
+    <script src="/src/content/occupancy.js"></script>
+    <script src="/src/content/trajectory.js"></script>
+    <script src="/src/content/trajectory-view.js"></script>
+    <script src="/src/content/student-home.js"></script>
+    <script src="/src/content/content.js"></script>
+  </body>
+</html>

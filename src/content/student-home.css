@@ -32,7 +32,7 @@
 }
 
 .ms-student-home__photo {
-  width: 5.5rem;
+  width: 88px;
   aspect-ratio: 3 / 4;
   overflow: hidden;
   border-radius: var(--radius-md);
@@ -86,14 +86,14 @@
   font-size: var(--text-sm);
 }
 
-@container (max-width: 28rem) {
+@container (max-width: 448px) {
   .ms-student-home {
     gap: var(--space-md);
     padding: var(--space-md);
   }
 
   .ms-student-home__photo {
-    width: 4.5rem;
+    width: 72px;
   }
 }
 

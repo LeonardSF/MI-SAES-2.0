@@ -25,6 +25,15 @@
   const OCCUPANCY_REFRESH_MINUTES = Object.freeze([1, 2, 5, 10, 15]);
 
   const RELEASES = Object.freeze({
+    "0.12.4": Object.freeze({
+      version: "0.12.4",
+      title: "MI SAES se actualizó",
+      items: Object.freeze([
+        "MI SAES conserva su tamaño aunque el portal use estilos tipográficos antiguos.",
+        "El acceso público ahora indica claramente que debes iniciar sesión para continuar."
+      ]),
+      releaseUrl: "https://github.com/LeonardSF/MI-SAES-2.0/releases/tag/v0.12.4"
+    }),
     "0.12.3": Object.freeze({
       version: "0.12.3",
       title: "MI SAES se actualizó",
@@ -103,6 +112,20 @@
   function releaseNoticeForInstall({ reason = "", previousVersion = "", currentVersion = "" } = {}) {
     if (reason !== "update" || !previousVersion || !releaseNotes(currentVersion)) return null;
     return { version: String(currentVersion), previousVersion: String(previousVersion) };
+  }
+
+  function launcherModel({ authenticated = false } = {}) {
+    return authenticated
+      ? {
+          title: "MI SAES 2.0",
+          message: "Arma tu horario sin empalmes",
+          ariaLabel: "Abrir MI SAES 2.0: arma tu horario sin empalmes"
+        }
+      : {
+          title: "MI SAES 2.0",
+          message: "Inicia sesión para continuar",
+          ariaLabel: "MI SAES 2.0: inicia sesión en SAES para continuar"
+        };
   }
 
   function applyStudentIdPrivacy(root, hidden) {
@@ -595,6 +618,7 @@
     mergeSettings,
     releaseNotes,
     releaseNoticeForInstall,
+    launcherModel,
     normalizeOccupancyRefreshMinutes,
     applyStudentIdPrivacy,
     misProfesoresSearchUrl,
