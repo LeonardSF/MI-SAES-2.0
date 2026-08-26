@@ -1,0 +1,23 @@
+/* MI SAES no modifica la apariencia del sitio original. */
+[data-misaes-filtered="true"] {
+  display: none !important;
+}
+
+[data-misaes-availability-column] {
+  min-width: 3.75rem;
+  text-align: center !important;
+  font-variant-numeric: tabular-nums;
+}
+
+a[data-misaes-teacher-link] {
+  color: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: #750946;
+  text-underline-offset: 0.15em;
+}
+
+a[data-misaes-teacher-link]:hover,
+a[data-misaes-teacher-link]:focus-visible {
+  color: #750946;
+}

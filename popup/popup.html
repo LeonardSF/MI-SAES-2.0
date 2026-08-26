@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MI SAES 2.0</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main class="popup-shell">
+      <header class="popup-header">
+        <img class="brand-icon" src="../assets/icon-128.png" alt="" width="40" height="40">
+        <div>
+          <h1>MI SAES 2.0</h1>
+          <p>Tu espacio escolar, más claro.</p>
+        </div>
+      </header>
+
+      <section class="status-card" aria-labelledby="status-title">
+        <span class="status-dot" aria-hidden="true"></span>
+        <div>
+          <h2 id="status-title">Comprobando SAES…</h2>
+          <p id="status-detail">Un momento.</p>
+        </div>
+      </section>
+
+      <button class="primary-button" id="open-panel" type="button" disabled>
+        Abrir Arma tu Horario
+      </button>
+
+      <section class="quick-settings" aria-labelledby="quick-title">
+        <h2 id="quick-title">Acceso rápido</h2>
+
+        <label class="setting-row">
+          <span>
+            <strong>MI SAES activo</strong>
+            <small>Muestra el botón dentro de SAES.</small>
+          </span>
+          <input id="enabled" type="checkbox" role="switch">
+        </label>
+
+      </section>
+
+      <footer class="popup-footer">
+        <button class="text-button" id="open-options" type="button">Privacidad y atajos</button>
+        <span>Local · sin cuentas</span>
+      </footer>
+      <p class="sr-only" id="live" aria-live="polite"></p>
+    </main>
+    <script src="../src/shared/core.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>

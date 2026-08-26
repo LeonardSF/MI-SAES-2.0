@@ -1,0 +1,67 @@
+{
+  "manifest_version": 3,
+  "name": "MI SAES 2.0",
+  "short_name": "MI SAES",
+  "version": "0.9.3",
+  "description": "Herramientas para mejorar tu experiencia en SAES IPN.",
+  "permissions": ["storage"],
+  "host_permissions": ["*://*.ipn.mx/*"],
+  "background": {
+    "service_worker": "src/background.js"
+  },
+  "action": {
+    "default_title": "Abrir MI SAES 2.0",
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "assets/icon-16.png",
+      "32": "assets/icon-32.png",
+      "48": "assets/icon-48.png",
+      "128": "assets/icon-128.png"
+    }
+  },
+  "icons": {
+    "16": "assets/icon-16.png",
+    "32": "assets/icon-32.png",
+    "48": "assets/icon-48.png",
+    "128": "assets/icon-128.png"
+  },
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": true
+  },
+  "commands": {
+    "toggle-panel": {
+      "suggested_key": {
+        "default": "Alt+M",
+        "mac": "Alt+M"
+      },
+      "description": "Abrir o cerrar MI SAES 2.0"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.ipn.mx/*"],
+      "css": ["src/content/page.css"],
+      "js": [
+        "src/shared/core.js",
+        "src/content/scanner.js",
+        "src/content/occupancy.js",
+        "src/content/trajectory.js",
+        "src/content/trajectory-view.js",
+        "src/content/content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "tokens.css",
+        "src/content/content.css",
+        "src/content/trajectory-home.css",
+        "assets/fonts/*.woff2"
+      ],
+      "matches": ["*://*.ipn.mx/*"]
+    }
+  ]
+}

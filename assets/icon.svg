@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">MI SAES 2.0</title>
+  <desc id="desc">Monograma MI en guinda</desc>
+  <rect width="128" height="128" rx="28" fill="#750946"/>
+  <path d="M28 86V39l23 25 23-25v47" fill="none" stroke="#F7F2F5" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M96 51v35" fill="none" stroke="#F7F2F5" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="96" cy="34" r="5" fill="#A43A73" stroke="#F7F2F5" stroke-width="3"/>
+</svg>

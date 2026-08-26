@@ -1,0 +1,82 @@
+@import url("./content.css");
+
+:host {
+  position: static;
+  inset: auto;
+  z-index: auto;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  color-scheme: light;
+  font-size: 16px;
+  pointer-events: auto;
+  container-type: inline-size;
+}
+
+.ms-trajectory-home-surface {
+  min-width: 0;
+  margin-block: var(--space-xl);
+  padding: var(--space-lg);
+  border: var(--rule-thin) solid var(--color-rule-2);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  line-height: 1.5;
+}
+
+.ms-trajectory-home-surface .ms-trajectory-progress {
+  margin-block-start: var(--space-lg);
+}
+
+.ms-trajectory-home-surface .ms-trajectory-metrics {
+  grid-template-columns: 1fr;
+}
+
+.ms-trajectory-home-surface .ms-trajectory-metric,
+.ms-trajectory-home-surface .ms-trajectory-metric:nth-child(odd),
+.ms-trajectory-home-surface .ms-trajectory-metric:nth-child(even) {
+  padding-inline: 0;
+  border-inline-start: 0;
+  border-block-end: var(--rule-thin) solid var(--color-rule);
+}
+
+.ms-trajectory-home-surface .ms-trajectory-metric:last-child {
+  border-block-end: 0;
+}
+
+@container (min-width: 40rem) {
+  .ms-trajectory-home-surface .ms-trajectory-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .ms-trajectory-home-surface .ms-trajectory-metric,
+  .ms-trajectory-home-surface .ms-trajectory-metric:nth-child(odd),
+  .ms-trajectory-home-surface .ms-trajectory-metric:nth-child(even) {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-2xs);
+    padding: var(--space-sm) var(--space-md);
+    border-block-end: 0;
+  }
+
+  .ms-trajectory-home-surface .ms-trajectory-metric:first-child {
+    padding-inline-start: 0;
+  }
+
+  .ms-trajectory-home-surface .ms-trajectory-metric + .ms-trajectory-metric {
+    border-inline-start: var(--rule-thin) solid var(--color-rule);
+  }
+
+  .ms-trajectory-home-surface .ms-trajectory-metric dd {
+    text-align: start;
+  }
+}
+
+@media (max-width: 30rem) {
+  .ms-trajectory-home-surface {
+    margin-block: var(--space-lg);
+    padding: var(--space-md);
+  }
+}

@@ -1,0 +1,257 @@
+/* Hallmark · genre: modern-minimal · macrostructure: Workbench · surface: popup */
+/* Hallmark · pre-emit critique: P5 H5 E4 S5 R5 V4 */
+/* Hallmark · verified: WCAG AA contrast · slop test 58/58 · mobile 320/375/414/768 */
+@import url("../tokens.css");
+
+html,
+body {
+  margin: 0;
+  overflow-x: clip;
+  color: var(--color-ink);
+  background: var(--color-paper);
+  font-family: var(--font-body);
+  font-size: 16px;
+}
+
+body {
+  width: 23rem;
+  max-width: 100%;
+  min-width: 20rem;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+button,
+select,
+input {
+  font: inherit;
+}
+
+.popup-shell {
+  min-width: 0;
+  padding: var(--space-md);
+}
+
+.popup-header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-sm);
+  align-items: center;
+  padding-block-end: var(--space-md);
+  border-block-end: var(--rule-thin) solid var(--color-rule);
+}
+
+.brand-icon {
+  border-radius: var(--radius-md);
+}
+
+.popup-header h1,
+.popup-header p,
+.status-card h2,
+.status-card p,
+.quick-settings h2 {
+  margin: 0;
+}
+
+.popup-header h1 {
+  font-family: var(--font-wordmark);
+  font-size: var(--text-md);
+  letter-spacing: -0.045em;
+}
+
+.popup-header p,
+.status-card p,
+.setting-row small,
+.popup-footer {
+  color: var(--color-neutral);
+  font-size: var(--text-sm);
+}
+
+.status-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-sm);
+  align-items: start;
+  margin-block: var(--space-md);
+  padding: var(--space-md);
+  border: var(--rule-thin) solid var(--color-rule);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+
+.status-dot {
+  width: 0.75rem;
+  height: 0.75rem;
+  margin-block-start: var(--space-2xs);
+  border: var(--rule-strong) solid var(--color-surface);
+  border-radius: var(--radius-pill);
+  background: var(--color-warning);
+  box-shadow: 0 0 0 var(--rule-thin) var(--color-rule-2);
+}
+
+.status-card[data-state="ready"] .status-dot {
+  background: var(--color-success);
+}
+
+.status-card[data-state="offline"] .status-dot {
+  background: var(--color-error);
+}
+
+.status-card h2 {
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  font-weight: 700;
+}
+
+.status-card p {
+  margin-block-start: var(--space-2xs);
+}
+
+.primary-button,
+.text-button,
+select {
+  min-height: 2.75rem;
+  border: var(--rule-thin) solid var(--color-rule-2);
+  border-radius: var(--radius-sm);
+  outline: 2px solid transparent;
+  outline-offset: 1px;
+}
+
+.primary-button {
+  display: inline-flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+  cursor: pointer;
+  font-weight: 700;
+  transition: background-color var(--dur-short) var(--ease-out), transform var(--dur-short) var(--ease-out);
+}
+
+.primary-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.primary-button:active,
+.text-button:active {
+  transform: translateY(1px);
+}
+
+.quick-settings {
+  margin-block-start: var(--space-lg);
+}
+
+.quick-settings h2 {
+  margin-block-end: var(--space-xs);
+  font-size: var(--text-sm);
+}
+
+.setting-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-sm);
+  align-items: center;
+  min-height: 4.25rem;
+  padding-block: var(--space-sm);
+  border-block-end: var(--rule-thin) solid var(--color-rule);
+}
+
+.setting-row strong,
+.setting-row small {
+  display: block;
+}
+
+.setting-row strong {
+  font-size: var(--text-sm);
+}
+
+.setting-row input[type="checkbox"] {
+  width: 1.25rem;
+  height: 1.25rem;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+select {
+  max-width: 7.5rem;
+  padding-inline: var(--space-xs);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+select:disabled,
+.setting-row input:disabled,
+.text-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.popup-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin-block-start: var(--space-md);
+}
+
+.text-button {
+  padding-inline: var(--space-xs);
+  border-color: transparent;
+  background: transparent;
+  color: var(--color-accent);
+  cursor: pointer;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: background-color var(--dur-short) var(--ease-out), transform var(--dur-short) var(--ease-out);
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-focus-contrast);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 5px var(--color-focus);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .primary-button:not(:disabled):hover {
+    background: var(--color-accent-hover);
+  }
+
+  .text-button:hover {
+    background: var(--color-accent-soft);
+  }
+
+  select:not(:disabled):hover {
+    background: var(--color-paper-2);
+  }
+
+  .setting-row input[type="checkbox"]:not(:disabled):hover {
+    box-shadow: 0 0 0 3px var(--color-accent-soft);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    transition-duration: 1ms !important;
+  }
+}

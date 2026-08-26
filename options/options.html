@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Configuración · MI SAES 2.0</title>
+    <link rel="stylesheet" href="options.css">
+  </head>
+  <body>
+    <div class="options-shell">
+      <header class="options-header">
+        <div class="brand-lockup">
+          <img src="../assets/icon-128.png" alt="" width="52" height="52">
+          <div>
+            <p class="wordmark">MI SAES 2.0</p>
+            <p class="subtitle">Configuración local</p>
+          </div>
+        </div>
+        <a class="header-link" href="https://www.ipn.mx/" target="_blank" rel="noreferrer">Sitio del IPN ↗</a>
+      </header>
+
+      <main class="workbench">
+        <nav class="side-rail" aria-label="Secciones de configuración">
+          <a href="#privacy">Privacidad</a>
+          <a href="#shortcuts">Atajos</a>
+        </nav>
+
+        <div class="settings-document">
+          <section class="intro">
+            <h1>Arma tu Horario.</h1>
+            <p>Escanea la oferta de tu carrera, compara grupos y guarda una propuesta antes de tu reinscripción.</p>
+          </section>
+
+          <section class="settings-section privacy-section" id="privacy">
+            <div class="section-heading">
+              <div>
+                <h2>Privacidad por diseño</h2>
+                <p>La extensión no necesita una cuenta propia ni servidores externos.</p>
+              </div>
+            </div>
+            <dl class="privacy-grid">
+              <div><dt>Contraseña y CAPTCHA</dt><dd>Nunca se leen, guardan ni completan.</dd></div>
+              <div><dt>Datos escolares</dt><dd>Se procesan en la pestaña y no se transmiten.</dd></div>
+              <div><dt>Catálogo y horario preparado</dt><dd>Se almacenan sólo en <code>chrome.storage.local</code>.</dd></div>
+              <div><dt>Permisos</dt><dd>Almacenamiento local y ejecución declarada en páginas IPN.</dd></div>
+            </dl>
+            <a class="outline-link" href="../PRIVACY.md" target="_blank">Leer política completa</a>
+          </section>
+
+          <section class="settings-section" id="shortcuts">
+            <div class="section-heading">
+              <div>
+                <h2>Atajos</h2>
+                <p>Disponibles dentro de una página compatible.</p>
+              </div>
+            </div>
+            <div class="shortcut-row"><span>Abrir o cerrar herramientas</span><kbd>Alt</kbd><span>+</span><kbd>M</kbd></div>
+          </section>
+        </div>
+      </main>
+
+      <footer class="options-footer">
+        <span>MI SAES 2.0 · versión 0.9.3</span>
+        <span>No afiliado oficialmente al IPN.</span>
+      </footer>
+      <p class="save-status" id="save-status" aria-live="polite">Preferencias cargadas.</p>
+    </div>
+    <script src="../src/shared/core.js"></script>
+    <script src="options.js"></script>
+  </body>
+</html>
