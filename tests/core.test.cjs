@@ -113,6 +113,28 @@ test("limpia sólo los datos derivados del escaneo de materias", async () => {
   });
 });
 
+test("no reutiliza un catálogo de otra Carrera o Plan de estudio", () => {
+  const catalog = { career: "INGENIERÍA EN COMPUTACIÓN", plan: "Plan del 1/1/2004", mode: "Periodo actual" };
+
+  assert.equal(core.scheduleCatalogMatches(catalog, {
+    careerLabel: "Ingenieria en Computacion",
+    planLabel: "Plan del 1/1/2004"
+  }), true);
+  assert.equal(core.scheduleCatalogMatches(catalog, {
+    careerLabel: "INGENIERÍA EN COMPUTACIÓN",
+    planLabel: "Plan 2020"
+  }), false);
+  assert.equal(core.scheduleCatalogMatches(catalog, {
+    careerLabel: "INGENIERÍA EN COMUNICACIONES",
+    planLabel: "Plan del 1/1/2004"
+  }), false);
+  assert.equal(core.scheduleCatalogMatches(catalog, {
+    careerLabel: "INGENIERÍA EN COMPUTACIÓN",
+    planLabel: "Plan del 1/1/2004",
+    modeLabel: "Próximo periodo"
+  }), false);
+});
+
 test("interpreta rangos de hora frecuentes", () => {
   assert.deepEqual(core.parseTimeRange("07:00 - 08:30"), { start: 420, end: 510 });
   assert.deepEqual(core.parseTimeRange("9.00 a 10.30"), { start: 540, end: 630 });
@@ -319,6 +341,11 @@ test("nombra las combinaciones generadas como horarios", () => {
   });
 });
 
+test("mantiene singular y plural en los resúmenes compactos", () => {
+  assert.equal(core.countLabel(1, "periodo", "periodos"), "1 periodo");
+  assert.equal(core.countLabel(2, "periodo", "periodos"), "2 periodos");
+});
+
 test("mezcla preferencias conservando módulos nuevos", () => {
   const settings = core.mergeSettings({ theme: "dark", modules: { notes: false } });
   assert.equal("theme" in settings, false);
@@ -477,6 +504,66 @@ test("el escáner ignora opciones vacías y conserva periodos y turnos reales", 
     ]
   });
   assert.deepEqual(options.map((option) => option.value), ["M", "V"]);
+});
+
+test("presenta Carrera, Plan y modo como una configuración dependiente", () => {
+  const select = (name, value, values) => ({
+    id: name,
+    name,
+    tagName: "SELECT",
+    value,
+    options: values.map(([optionValue, textContent]) => ({ value: optionValue, textContent, disabled: false })),
+    selectedOptions: values.filter(([optionValue]) => optionValue === value).map(([optionValue, textContent]) => ({ value: optionValue, textContent }))
+  });
+  const career = select("carrera", "ISC", [["", "Seleccione"], ["ISC", "INGENIERÍA EN COMPUTACIÓN"], ["ICE", "INGENIERÍA EN COMUNICACIONES"]]);
+  const shift = select("turno", "M", [["M", "Matutino"], ["V", "Vespertino"]]);
+  const plan = select("plan", "04", [["", "Seleccione"], ["04", "Plan 2004"], ["20", "Plan 2020"]]);
+  const period = select("periodo", "6", [["6", "6"]]);
+  const radios = [
+    { id: "actual", name: "periodo", value: "actual", checked: true, ownerDocument: null, closest: () => ({ textContent: "Periodo actual" }) },
+    { id: "proximo", name: "periodo", value: "proximo", checked: false, ownerDocument: null, closest: () => ({ textContent: "Próximo periodo" }) }
+  ];
+  const doc = {
+    querySelectorAll(selector) {
+      if (selector === "select") return [career, shift, plan, period];
+      if (selector === 'input[type="radio"]') return radios;
+      return [];
+    },
+    querySelector() { return null; }
+  };
+  radios.forEach((radio) => { radio.ownerDocument = doc; });
+
+  assert.deepEqual(scanner.configurationModel(doc), {
+    careers: [
+      { value: "ISC", label: "INGENIERÍA EN COMPUTACIÓN" },
+      { value: "ICE", label: "INGENIERÍA EN COMUNICACIONES" }
+    ],
+    plans: [
+      { value: "04", label: "Plan 2004" },
+      { value: "20", label: "Plan 2020" }
+    ],
+    modes: [
+      { value: "0", label: "Periodo actual" },
+      { value: "1", label: "Próximo periodo" }
+    ],
+    selectedCareer: "ISC",
+    selectedPlan: "04",
+    selectedMode: "0"
+  });
+});
+
+test("limita el escaneo al plan elegido", () => {
+  const control = {
+    value: "04",
+    options: [
+      { value: "04", textContent: "Plan 2004", disabled: false },
+      { value: "20", textContent: "Plan 2020", disabled: false }
+    ]
+  };
+
+  assert.deepEqual(scanner.requestedOptions(control, "20").map((option) => option.value), ["20"]);
+  assert.deepEqual(scanner.requestedOptions(control, "99"), []);
+  assert.deepEqual(scanner.requestedOptions(control).map((option) => option.value), ["04", "20"]);
 });
 
 test("el escáner resuelve postbacks contra la página de Horarios", () => {

@@ -34,6 +34,18 @@
     });
   }
 
+  function optionRecords(select) {
+    return usefulOptions(select).map((option) => ({
+      value: option.value,
+      label: option.textContent.trim()
+    }));
+  }
+
+  function requestedOptions(select, requestedValue = "") {
+    const options = usefulOptions(select);
+    return requestedValue ? options.filter((option) => option.value === requestedValue) : options;
+  }
+
   function discoverControls(doc) {
     const selects = [...doc.querySelectorAll("select")];
     const bySignal = (pattern, fallbackIndex) => selects.find((select) => pattern.test(normalize(`${select.id} ${select.name}`))) || selects[fallbackIndex] || null;
@@ -51,8 +63,27 @@
   function selectedLabel(control) {
     if (!control) return "";
     if (control.tagName === "SELECT") return control.selectedOptions[0]?.textContent?.trim() || "";
-    const label = control.id ? control.ownerDocument.querySelector(`label[for="${CSS.escape(control.id)}"]`) : null;
+    const wrappingLabel = control.closest?.("label");
+    if (wrappingLabel?.textContent?.trim()) return wrappingLabel.textContent.trim();
+    const escapedId = globalScope.CSS?.escape ? globalScope.CSS.escape(control.id) : String(control.id || "").replace(/["\\]/g, "\\$&");
+    const label = control.id ? control.ownerDocument.querySelector(`label[for="${escapedId}"]`) : null;
     return label?.textContent?.trim() || control.value || "";
+  }
+
+  function configurationModel(doc, { plans } = {}) {
+    const controls = discoverControls(doc);
+    const modes = controls.radios.map((radio, index) => ({
+      value: String(index),
+      label: selectedLabel(radio)
+    }));
+    return {
+      careers: optionRecords(controls.career),
+      plans: plans || optionRecords(controls.plan),
+      modes,
+      selectedCareer: controls.career?.value || "",
+      selectedPlan: controls.plan?.value || "",
+      selectedMode: String(Math.max(0, controls.radios.findIndex((radio) => radio.checked)))
+    };
   }
 
   function postbackTarget(control) {
@@ -145,7 +176,49 @@
     return parsed.length;
   }
 
-  async function scan({ rootDocument, url, core = globalScope.MISaesCore, signal, onProgress, includeNext = true, maxRequests = 90 } = {}) {
+  async function loadConfiguration({ rootDocument, url, careerValue = "", signal, maxRequests = 20 } = {}) {
+    let requests = 0;
+    const requestOptions = {
+      signal,
+      onRequest() {
+        requests += 1;
+        if (requests > maxRequests) throw new Error(`La configuración superó el límite seguro de ${maxRequests} consultas.`);
+      }
+    };
+    let initial;
+    if (rootDocument) {
+      const sourceUrl = url || rootDocument.__misaesUrl || rootDocument.URL || globalScope.location?.href;
+      initial = parseDocument(rootDocument.documentElement.outerHTML, sourceUrl);
+    } else {
+      if (!url) throw new Error("Falta la dirección de Horarios de SAES.");
+      requestOptions.onRequest();
+      const response = await fetch(url, { credentials: "include", redirect: "follow", signal });
+      if (!response.ok) throw new Error(`SAES respondió con código ${response.status} al abrir Horarios.`);
+      initial = parseDocument(await response.text(), response.url || url);
+    }
+    const initialControls = discoverControls(initial);
+    if (!initialControls.career || !initialControls.shift || !initialControls.plan) {
+      throw new Error("No pude identificar Carrera, Turno y Plan de estudio en esta versión de SAES.");
+    }
+    if (careerValue && !requestedOptions(initialControls.career, careerValue).length) {
+      throw new Error("La carrera seleccionada ya no está disponible en SAES.");
+    }
+    const careerDoc = careerValue ? await selectDocument(initial, "career", careerValue, requestOptions) : initial;
+    const controls = discoverControls(careerDoc);
+    const plans = new Map(optionRecords(controls.plan).map((option) => [option.value, option]));
+    const shifts = usefulOptions(controls.shift);
+    for (const shift of shifts) {
+      if (signal?.aborted) throw new DOMException("Configuración cancelada", "AbortError");
+      const shiftDoc = await selectDocument(careerDoc, "shift", shift.value, requestOptions);
+      optionRecords(discoverControls(shiftDoc).plan).forEach((option) => plans.set(option.value, option));
+    }
+    const model = configurationModel(careerDoc, { plans: [...plans.values()] });
+    model.selectedCareer = careerValue || model.selectedCareer;
+    if (!plans.has(model.selectedPlan)) model.selectedPlan = "";
+    return model;
+  }
+
+  async function scan({ rootDocument, url, core = globalScope.MISaesCore, signal, onProgress, includeNext = true, careerValue = "", planValue = "", modeIndex, maxRequests = 90 } = {}) {
     if (!core) throw new Error("No se cargó el lector de horarios de MI SAES.");
     let requests = 0;
     let leaves = 0;
@@ -174,26 +247,41 @@
     if (!initialControls.career || !initialControls.shift || !initialControls.period) {
       throw new Error("No pude identificar Carrera, Turno y Periodo en esta versión de SAES.");
     }
-    const career = selectedLabel(initialControls.career);
-    const modeIndexes = includeNext && initialControls.radios.length > 1 ? [0, 1] : [initialControls.radios.findIndex((radio) => radio.checked)].filter((index) => index >= 0);
+    if (careerValue && !requestedOptions(initialControls.career, careerValue).length) {
+      throw new Error("La carrera seleccionada ya no está disponible en SAES.");
+    }
+    const careerDoc = careerValue ? await selectDocument(initial, "career", careerValue, requestOptions) : initial;
+    const careerControls = discoverControls(careerDoc);
+    const career = selectedLabel(careerControls.career);
+    const requestedModeIndex = Number(modeIndex);
+    const hasRequestedMode = modeIndex !== undefined && Number.isInteger(requestedModeIndex) && requestedModeIndex >= 0;
+    const modeIndexes = hasRequestedMode
+      ? [requestedModeIndex]
+      : includeNext && careerControls.radios.length > 1
+      ? [0, 1]
+      : [careerControls.radios.findIndex((radio) => radio.checked)].filter((index) => index >= 0);
     if (!modeIndexes.length) modeIndexes.push(0);
     const offeringMap = new Map();
+    let selectedPlan = "";
+    let selectedMode = "";
 
     for (const modeIndex of modeIndexes) {
       if (signal?.aborted) throw new DOMException("Escaneo cancelado", "AbortError");
-      const modeDoc = await radioDocument(initial, modeIndex, requestOptions);
+      const modeDoc = await radioDocument(careerDoc, modeIndex, requestOptions);
       const modeControls = discoverControls(modeDoc);
       const modeLabel = selectedLabel(modeControls.radios.find((radio) => radio.checked)) || (modeIndex === 0 ? "Periodo actual" : "Próximo periodo");
+      selectedMode ||= modeLabel;
       const shifts = usefulOptions(modeControls.shift);
       const shiftOptions = shifts.length ? shifts : [{ value: modeControls.shift?.value || "", textContent: selectedLabel(modeControls.shift) }];
       for (const shiftOption of shiftOptions) {
         const shiftDoc = shiftOption.value ? await selectDocument(modeDoc, "shift", shiftOption.value, requestOptions) : modeDoc;
         const shiftControls = discoverControls(shiftDoc);
-        const plans = usefulOptions(shiftControls.plan);
-        const planOptions = plans.length ? plans : [{ value: shiftControls.plan?.value || "", textContent: selectedLabel(shiftControls.plan) }];
+        const plans = requestedOptions(shiftControls.plan, planValue);
+        const planOptions = plans.length ? plans : planValue ? [] : [{ value: shiftControls.plan?.value || "", textContent: selectedLabel(shiftControls.plan) }];
         for (const planOption of planOptions) {
           const planDoc = planOption.value ? await selectDocument(shiftDoc, "plan", planOption.value, requestOptions) : shiftDoc;
           const planControls = discoverControls(planDoc);
+          selectedPlan ||= selectedLabel(planControls.plan) || planOption.textContent.trim();
           const periods = usefulOptions(planControls.period);
           const periodOptions = periods.length ? periods : [{ value: planControls.period?.value || "", textContent: selectedLabel(planControls.period) }];
           for (const periodOption of periodOptions) {
@@ -214,8 +302,14 @@
       }
     }
 
+    if (planValue && !selectedPlan) {
+      throw new Error("El plan de estudio seleccionado no está disponible para los turnos de esta carrera.");
+    }
+
     return {
       career,
+      plan: selectedPlan,
+      mode: selectedMode,
       scannedAt: new Date().toISOString(),
       requests,
       combinationsScanned: leaves,
@@ -223,7 +317,7 @@
     };
   }
 
-  const api = Object.freeze({ discoverControls, usefulOptions, tableModel, formActionUrl, scan });
+  const api = Object.freeze({ discoverControls, usefulOptions, requestedOptions, configurationModel, loadConfiguration, tableModel, formActionUrl, scan });
   globalScope.MISaesScanner = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

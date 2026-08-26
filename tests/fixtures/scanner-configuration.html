@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="es">
+  <head><meta charset="utf-8"><title>Configuración del escáner</title></head>
+  <body>
+    <form>
+      <label>Carrera <select name="career"><option value="ISC" selected>INGENIERÍA EN COMPUTACIÓN</option></select></label>
+      <label>Turno <select name="shift"><option value="M" selected>Matutino</option></select></label>
+      <label>Plan <select name="plan"><option value="04" selected>Plan 2004</option></select></label>
+      <label>Periodo <select name="period"><option value="6" selected>6</option></select></label>
+      <label for="actual">Periodo actual</label><input id="actual" type="radio" name="mode" value="actual" checked>
+      <label for="next">Próximo periodo</label><input id="next" type="radio" name="mode" value="next">
+    </form>
+    <output id="result">pendiente</output>
+    <script src="/src/content/scanner.js"></script>
+    <script>
+      MISaesScanner.loadConfiguration({ rootDocument: document })
+        .then((configuration) => { document.getElementById("result").textContent = JSON.stringify(configuration); })
+        .catch((error) => { document.getElementById("result").textContent = error.message; });
+    </script>
+  </body>
+</html>

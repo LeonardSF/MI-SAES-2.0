@@ -164,6 +164,18 @@
     }
   }
 
+  function scheduleCatalogMatches(catalog = {}, selection = {}) {
+    const expectedCareer = normalizeText(selection.careerLabel);
+    const expectedPlan = normalizeText(selection.planLabel);
+    const expectedMode = normalizeText(selection.modeLabel);
+    const catalogCareer = normalizeText(catalog.career);
+    const catalogPlan = normalizeText(catalog.plan || catalog.offerings?.[0]?.source?.plan);
+    const catalogMode = normalizeText(catalog.mode || catalog.offerings?.[0]?.source?.mode);
+    return (!expectedCareer || expectedCareer === catalogCareer)
+      && (!expectedPlan || expectedPlan === catalogPlan)
+      && (!expectedMode || expectedMode === catalogMode);
+  }
+
   function shouldRenderSchedulePlanner({ authenticated = false, offeringsPage = false, context = "" } = {}) {
     return context !== "login" && (offeringsPage || authenticated);
   }
@@ -610,6 +622,11 @@
     };
   }
 
+  function countLabel(count, singular, plural) {
+    const total = Math.max(0, Number(count) || 0);
+    return `${total} ${total === 1 ? singular : plural}`;
+  }
+
   const api = Object.freeze({
     DEFAULT_SETTINGS,
     OCCUPANCY_REFRESH_MINUTES,
@@ -623,6 +640,7 @@
     applyStudentIdPrivacy,
     misProfesoresSearchUrl,
     schedulePageUrl,
+    scheduleCatalogMatches,
     shouldRenderSchedulePlanner,
     clearScannedScheduleData,
     shouldShowTrajectoryHome,
@@ -645,6 +663,7 @@
     filterPlannerOfferings,
     tableToCsv,
     calculateAverage,
+    countLabel,
     generatedScheduleCopy
   });
 

@@ -785,8 +785,22 @@ textarea {
 
 .ms-scan > .ms-helper,
 .ms-scan__progress,
+.ms-scan-config,
+.ms-scan-config__status,
 .ms-occupancy-tools {
   grid-column: 1 / -1;
+}
+
+.ms-scan-config {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-sm);
+  padding-block: var(--space-xs);
+}
+
+.ms-scan-config__status[data-state="error"] {
+  color: var(--color-error);
+  font-weight: 700;
 }
 
 .ms-occupancy-tools {
@@ -2077,8 +2091,14 @@ textarea {
 
   .ms-scan > .ms-helper,
   .ms-scan__progress,
+  .ms-scan-config,
+  .ms-scan-config__status,
   .ms-occupancy-tools {
     grid-column: 1;
+  }
+
+  .ms-scan-config {
+    grid-template-columns: 1fr;
   }
 
   .ms-occupancy-tools {

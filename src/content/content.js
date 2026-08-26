@@ -51,6 +51,7 @@
   };
 
   const plannerKey = `planner:${location.origin}:${location.pathname}`;
+  const plannerConfigKey = `planner-config:${location.origin}:schedule`;
   const catalogKey = `catalog:${location.origin}:schedule`;
   const preparedKey = `prepared:${location.origin}:schedule`;
   const occupancyKey = `occupancy:${location.origin}:schedule`;
@@ -58,7 +59,7 @@
   const occupancyRefreshPreferenceKey = `occupancy-refresh-minutes:${location.origin}`;
   const trajectoryKey = `trajectory:${location.origin}`;
   const releaseNoticeKey = "releaseNotice";
-  const storedState = await storage.get(["settings", plannerKey, catalogKey, preparedKey, occupancyKey, occupancyPreferenceKey, occupancyRefreshPreferenceKey, trajectoryKey, releaseNoticeKey]);
+  const storedState = await storage.get(["settings", plannerKey, plannerConfigKey, catalogKey, preparedKey, occupancyKey, occupancyPreferenceKey, occupancyRefreshPreferenceKey, trajectoryKey, releaseNoticeKey]);
   const savedSettings = storedState.settings || {};
   let settings = core.mergeSettings(savedSettings);
   let tableModels = [];
@@ -85,6 +86,11 @@
   let scanController = null;
   let conflicts = [];
   let plannerSelection = new Set(Array.isArray(storedState[plannerKey]) ? storedState[plannerKey] : []);
+  let plannerConfigSelection = storedState[plannerConfigKey] || {};
+  let plannerConfiguration = null;
+  let plannerConfigurationPromise = null;
+  let plannerConfigurationController = null;
+  let plannerConfigurationError = "";
   let generatedSchedules = [];
   let activeGeneratedSchedule = 0;
   const isOfferingsCatalog = /\/academica\/horarios\.aspx$/i.test(location.pathname) || (isLocalPreview && /\/saes-schedule\.html$/i.test(location.pathname));
@@ -223,7 +229,10 @@
     visibleCareer = careerControl?.selectedOptions?.[0]?.textContent?.trim() || (!isOfferingsCatalog ? scanCatalog?.career || "" : "");
     visiblePlan = pageControls.plan?.selectedOptions?.[0]?.textContent?.trim()
       || (!isOfferingsCatalog ? scanCatalog?.offerings?.find((item) => item.source?.plan)?.source?.plan || "" : "");
-    catalogMatchesPage = !isOfferingsCatalog || !scanCatalog || !visibleCareer || core.normalizeText(scanCatalog.career) === core.normalizeText(visibleCareer);
+    catalogMatchesPage = !scanCatalog || core.scheduleCatalogMatches(scanCatalog, {
+      careerLabel: plannerConfigSelection.careerLabel || visibleCareer,
+      planLabel: plannerConfigSelection.planLabel || visiblePlan
+    });
     courseOfferings = scanCatalog?.offerings?.length && catalogMatchesPage ? scanCatalog.offerings : visibleOfferings;
     conflicts = isOfferingsCatalog ? [] : core.findScheduleConflicts(scheduleEntries);
   }
@@ -779,25 +788,113 @@
     intro.append(heading, lede, workflow);
     view.append(intro);
 
+    async function ensurePlannerConfiguration({ careerValue = plannerConfigSelection.careerValue || "", force = false } = {}) {
+      if (!globalThis.MISaesScanner?.loadConfiguration) return;
+      if (plannerConfigurationPromise && !force) return plannerConfigurationPromise;
+      if (force) plannerConfigurationController?.abort();
+      plannerConfigurationController = new AbortController();
+      plannerConfigurationError = "";
+      const controller = plannerConfigurationController;
+      plannerConfigurationPromise = globalThis.MISaesScanner.loadConfiguration({
+        rootDocument: isOfferingsCatalog ? document : undefined,
+        url: scheduleDestination(),
+        careerValue,
+        signal: controller.signal
+      }).then(async (configuration) => {
+        plannerConfiguration = configuration;
+        const selectedCareer = configuration.careers.find((option) => option.value === (careerValue || plannerConfigSelection.careerValue))
+          || configuration.careers.find((option) => option.value === configuration.selectedCareer)
+          || configuration.careers[0];
+        const selectedPlan = configuration.plans.find((option) => option.value === plannerConfigSelection.planValue)
+          || configuration.plans.find((option) => option.value === configuration.selectedPlan)
+          || configuration.plans[0];
+        const selectedMode = configuration.modes.find((option) => option.value === String(plannerConfigSelection.modeIndex ?? configuration.selectedMode))
+          || configuration.modes[0];
+        plannerConfigSelection = {
+          careerValue: selectedCareer?.value || "",
+          careerLabel: selectedCareer?.label || "",
+          planValue: selectedPlan?.value || "",
+          planLabel: selectedPlan?.label || "",
+          modeIndex: selectedMode?.value || "0",
+          modeLabel: selectedMode?.label || "Periodo actual"
+        };
+        await storage.set({ [plannerConfigKey]: plannerConfigSelection });
+      }).catch((error) => {
+        if (error?.name !== "AbortError") plannerConfigurationError = error?.message || "No pudimos cargar Carrera y Plan de estudio.";
+      }).finally(() => {
+        if (plannerConfigurationController === controller) plannerConfigurationController = null;
+        plannerConfigurationPromise = null;
+        if (isOpen && activeView === "schedule") renderView();
+      });
+      return plannerConfigurationPromise;
+    }
+
+    if (!plannerConfiguration && !plannerConfigurationPromise) void ensurePlannerConfiguration();
+
     const scanSection = document.createElement("section");
     scanSection.className = "ms-scan";
     const scanCopy = document.createElement("div");
     scanCopy.className = "ms-scan__copy";
     const scanTitle = document.createElement("strong");
-    scanTitle.textContent = scanCatalog && catalogMatchesPage ? `Materias escaneadas · ${scanCatalog.career}` : "Escanea las materias de tu carrera";
+    const catalogMatchesConfiguration = !scanCatalog || core.scheduleCatalogMatches(scanCatalog, plannerConfigSelection);
+    scanTitle.textContent = scanCatalog && catalogMatchesConfiguration ? `Materias escaneadas · ${scanCatalog.career}` : "Configura y escanea tus materias";
     const scanDetail = document.createElement("p");
     scanDetail.className = "ms-helper";
-    if (scanCatalog && catalogMatchesPage) {
+    if (scanCatalog && catalogMatchesConfiguration) {
       const periods = new Set(scanCatalog.offerings.map((item) => item.source?.period).filter(Boolean));
       const shifts = new Set(scanCatalog.offerings.map((item) => item.source?.shift).filter(Boolean));
       const updated = new Intl.DateTimeFormat("es-MX", { dateStyle: "medium", timeStyle: "short" }).format(new Date(scanCatalog.scannedAt));
-      scanDetail.textContent = `${scanCatalog.offerings.length} grupos · ${periods.size} periodos · ${shifts.size} turnos · ${updated}`;
-    } else if (scanCatalog && !catalogMatchesPage) {
-      scanDetail.textContent = `El catálogo guardado pertenece a ${scanCatalog.career}, pero SAES muestra ${visibleCareer}. Actualiza el escaneo para evitar mezclar carreras.`;
+      scanDetail.textContent = `${core.countLabel(scanCatalog.offerings.length, "grupo", "grupos")} · ${core.countLabel(periods.size, "periodo", "periodos")} · ${core.countLabel(shifts.size, "turno", "turnos")} · ${updated}`;
+    } else if (scanCatalog && !catalogMatchesConfiguration) {
+      scanDetail.textContent = `El catálogo guardado pertenece a ${scanCatalog.career} · ${scanCatalog.plan || scanCatalog.offerings?.[0]?.source?.plan || "plan no indicado"}. Escanea la nueva configuración para no mezclar planes.`;
     } else {
-      scanDetail.textContent = "Recorre todos los turnos, planes y periodos de la carrera y del modo Actual/Próximo seleccionado en SAES. Las consultas son secuenciales y de sólo lectura.";
+      scanDetail.textContent = "Elige Carrera y Plan de estudio. Después recorreremos todos sus turnos y periodos mediante consultas secuenciales de sólo lectura.";
     }
     scanCopy.append(scanTitle, scanDetail);
+    const configurationFields = document.createElement("div");
+    configurationFields.className = "ms-scan-config";
+    function makeConfigurationField(labelText, options, value, { disabled = false } = {}) {
+      const field = document.createElement("label");
+      field.className = "ms-field";
+      const label = document.createElement("span");
+      label.className = "ms-label";
+      label.textContent = labelText;
+      const select = document.createElement("select");
+      select.className = "ms-select";
+      select.disabled = disabled;
+      if (!options?.length) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = plannerConfigurationPromise ? "Cargando…" : "No disponible";
+        select.append(option);
+      } else {
+        options.forEach((item) => {
+          const option = document.createElement("option");
+          option.value = item.value;
+          option.textContent = item.label;
+          option.selected = item.value === value;
+          select.append(option);
+        });
+      }
+      field.append(label, select);
+      return { field, select };
+    }
+    const careerField = makeConfigurationField("Carrera", plannerConfiguration?.careers, plannerConfigSelection.careerValue, { disabled: !plannerConfiguration || Boolean(plannerConfigurationPromise) });
+    const planField = makeConfigurationField("Plan de estudio", plannerConfiguration?.plans, plannerConfigSelection.planValue, { disabled: !plannerConfiguration || !plannerConfigSelection.careerValue || Boolean(plannerConfigurationPromise) });
+    const modeField = makeConfigurationField("Periodo escolar", plannerConfiguration?.modes, String(plannerConfigSelection.modeIndex ?? "0"), { disabled: !plannerConfiguration || Boolean(plannerConfigurationPromise) });
+    configurationFields.append(careerField.field, planField.field, modeField.field);
+    const configurationStatus = document.createElement("p");
+    configurationStatus.className = "ms-helper ms-scan-config__status";
+    configurationStatus.setAttribute("role", "status");
+    configurationStatus.setAttribute("aria-live", "polite");
+    if (plannerConfigurationError) {
+      configurationStatus.dataset.state = "error";
+      configurationStatus.textContent = `${plannerConfigurationError} Abre Horarios de clase y vuelve a intentarlo.`;
+    } else if (plannerConfigurationPromise) {
+      configurationStatus.textContent = "Cargando carreras y planes disponibles en SAES…";
+    } else {
+      configurationStatus.textContent = "El plan depende de la carrera. El escaneo incluirá todos sus turnos y periodos.";
+    }
     const scanActions = document.createElement("div");
     scanActions.className = "ms-row";
     const scanButton = document.createElement("button");
@@ -808,6 +905,8 @@
       return scanCatalog ? "Actualizar materias" : "Escanear materias";
     }
     scanButton.textContent = scanButtonLabel();
+    const configurationReady = Boolean(plannerConfiguration && plannerConfigSelection.careerValue && plannerConfigSelection.planValue);
+    scanButton.disabled = !configurationReady;
     const clearScanButton = document.createElement("button");
     clearScanButton.type = "button";
     clearScanButton.className = "ms-button ms-button--clear";
@@ -890,12 +989,47 @@
     });
     occupancyIntervalSelect.addEventListener("change", () => setOccupancyRefreshMinutes(occupancyIntervalSelect.value));
     occupancyTools.append(occupancyToggle, occupancyIntervalField, occupancyStatus);
-    scanSection.append(scanCopy, scanActions, scanProgress, scanStatus, occupancyTools);
+    scanSection.append(scanCopy, configurationFields, configurationStatus, scanActions, scanProgress, scanStatus, occupancyTools);
     view.append(scanSection);
     refreshOccupancyView = updateOccupancyStatus;
     workflowSteps[0].dataset.state = courseOfferings.length ? "complete" : "active";
     workflowSteps[1].dataset.state = courseOfferings.length ? "active" : "pending";
     workflowSteps[2].dataset.state = "pending";
+
+    careerField.select.addEventListener("change", async () => {
+      const selected = plannerConfiguration?.careers.find((option) => option.value === careerField.select.value);
+      plannerConfigSelection = {
+        ...plannerConfigSelection,
+        careerValue: selected?.value || "",
+        careerLabel: selected?.label || "",
+        planValue: "",
+        planLabel: ""
+      };
+      plannerConfiguration = null;
+      courseOfferings = [];
+      plannerSelection.clear();
+      generatedSchedules = [];
+      await storage.set({ [plannerConfigKey]: plannerConfigSelection, [plannerKey]: [] });
+      renderView();
+    });
+    planField.select.addEventListener("change", async () => {
+      const selected = plannerConfiguration?.plans.find((option) => option.value === planField.select.value);
+      plannerConfigSelection = { ...plannerConfigSelection, planValue: selected?.value || "", planLabel: selected?.label || "" };
+      courseOfferings = [];
+      plannerSelection.clear();
+      generatedSchedules = [];
+      await storage.set({ [plannerConfigKey]: plannerConfigSelection, [plannerKey]: [] });
+      renderView();
+    });
+    modeField.select.addEventListener("change", async () => {
+      const selected = plannerConfiguration?.modes.find((option) => option.value === modeField.select.value);
+      plannerConfigSelection = { ...plannerConfigSelection, modeIndex: selected?.value || "0", modeLabel: selected?.label || "Periodo actual" };
+      courseOfferings = [];
+      plannerSelection.clear();
+      generatedSchedules = [];
+      await storage.set({ [plannerConfigKey]: plannerConfigSelection, [plannerKey]: [] });
+      renderView();
+    });
 
     if (preparedSchedule) {
       const prepared = document.createElement("section");
@@ -945,6 +1079,9 @@
           core,
           signal: scanController.signal,
           includeNext: false,
+          careerValue: plannerConfigSelection.careerValue,
+          planValue: plannerConfigSelection.planValue,
+          modeIndex: plannerConfigSelection.modeIndex,
           onProgress(progress) {
             const source = progress.metadata;
             scanStatus.textContent = `${progress.offerings} grupos encontrados · ${source.shift} · periodo ${source.period}`;
@@ -980,7 +1117,7 @@
         }
       } finally {
         scanController = null;
-        scanButton.disabled = false;
+        scanButton.disabled = !configurationReady;
         if (scanButton.dataset.state !== "error") delete scanButton.dataset.state;
         scanButton.textContent = scanButtonLabel();
         stopButton.hidden = true;
