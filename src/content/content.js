@@ -97,7 +97,7 @@
   const scheduleSortCriterion = "balanced";
   const isOfferingsCatalog = /\/academica\/horarios\.aspx$/i.test(location.pathname) || (isLocalPreview && /\/saes-schedule\.html$/i.test(location.pathname));
   const isReenrollmentPage = /\/alumnos\/reinscripciones\//i.test(location.pathname) || context === "reenrollment";
-  const extensionVersion = chrome.runtime.getManifest?.().version || "0.12.4";
+  const extensionVersion = chrome.runtime.getManifest?.().version || "0.13.0";
   const launcherCopy = core.launcherModel({ authenticated: hasAuthenticatedSession });
   let releaseNotice = storedState[releaseNoticeKey] || null;
   let isOpen = false;

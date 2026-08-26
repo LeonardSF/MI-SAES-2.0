@@ -78,12 +78,12 @@ test("muestra las novedades instaladas en un banner descartable", () => {
   assert.match(styles, /\.ms-release-banner\s*\{[^}]*display:\s*grid;/s);
 });
 
-test("mantiene sincronizada la versión 0.12.4 en las superficies publicadas", () => {
+test("mantiene sincronizada la versión 0.13.0 en las superficies publicadas", () => {
   const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
   const options = fs.readFileSync(path.join(root, "options/options.html"), "utf8");
-  assert.equal(manifest.version, "0.12.4");
-  assert.equal(packageJson.version, "0.12.4");
-  assert.match(options, /versión 0\.12\.4/);
+  assert.equal(manifest.version, "0.13.0");
+  assert.equal(packageJson.version, "0.13.0");
+  assert.match(options, /versión 0\.13\.0/);
 });
 
 test("el acceso flotante conserva una version compacta para ventanas estrechas", () => {

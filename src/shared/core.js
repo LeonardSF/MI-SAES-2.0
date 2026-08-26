@@ -25,6 +25,17 @@
   const OCCUPANCY_REFRESH_MINUTES = Object.freeze([1, 2, 5, 10, 15]);
 
   const RELEASES = Object.freeze({
+    "0.13.0": Object.freeze({
+      version: "0.13.0",
+      title: "MI SAES se actualizó",
+      items: Object.freeze([
+        "Elige materias y acepta varios grupos como alternativas antes de generar tu horario.",
+        "Compara horarios generados con métricas de días, horas de clase y tiempo libre.",
+        "Consulta los lugares actuales por grupo directamente en el calendario.",
+        "Descarga tu horario compacto como imagen PNG."
+      ]),
+      releaseUrl: "https://github.com/LeonardSF/MI-SAES-2.0/releases/tag/v0.13.0"
+    }),
     "0.12.4": Object.freeze({
       version: "0.12.4",
       title: "MI SAES se actualizó",

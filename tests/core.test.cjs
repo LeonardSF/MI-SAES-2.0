@@ -42,15 +42,17 @@ test("descarta la preferencia heredada del asistente de evaluación", () => {
   assert.equal(Object.hasOwn(settings.modules, "evaluationAssist"), false);
 });
 
-test("describe las novedades verificadas de la versión 0.12.4", () => {
-  assert.deepEqual(core.releaseNotes("0.12.4"), {
-    version: "0.12.4",
+test("describe las novedades verificadas de la versión 0.13.0", () => {
+  assert.deepEqual(core.releaseNotes("0.13.0"), {
+    version: "0.13.0",
     title: "MI SAES se actualizó",
     items: [
-      "MI SAES conserva su tamaño aunque el portal use estilos tipográficos antiguos.",
-      "El acceso público ahora indica claramente que debes iniciar sesión para continuar."
+      "Elige materias y acepta varios grupos como alternativas antes de generar tu horario.",
+      "Compara horarios generados con métricas de días, horas de clase y tiempo libre.",
+      "Consulta los lugares actuales por grupo directamente en el calendario.",
+      "Descarga tu horario compacto como imagen PNG."
     ],
-    releaseUrl: "https://github.com/LeonardSF/MI-SAES-2.0/releases/tag/v0.12.4"
+    releaseUrl: "https://github.com/LeonardSF/MI-SAES-2.0/releases/tag/v0.13.0"
   });
   assert.equal(core.releaseNotes("9.9.9"), null);
 });
@@ -58,13 +60,13 @@ test("describe las novedades verificadas de la versión 0.12.4", () => {
 test("crea un aviso sólo cuando Chrome actualiza a una versión con novedades", () => {
   assert.deepEqual(core.releaseNoticeForInstall({
     reason: "update",
-    previousVersion: "0.12.3",
-    currentVersion: "0.12.4"
+    previousVersion: "0.12.4",
+    currentVersion: "0.13.0"
   }), {
-    version: "0.12.4",
-    previousVersion: "0.12.3"
+    version: "0.13.0",
+    previousVersion: "0.12.4"
   });
-  assert.equal(core.releaseNoticeForInstall({ reason: "install", currentVersion: "0.12.4" }), null);
+  assert.equal(core.releaseNoticeForInstall({ reason: "install", currentVersion: "0.13.0" }), null);
   assert.equal(core.releaseNoticeForInstall({ reason: "update", currentVersion: "9.9.9" }), null);
 });
 

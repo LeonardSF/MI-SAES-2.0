@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img alt="Versión 0.12.4" src="https://img.shields.io/badge/versión-0.12.4-750946?style=flat-square">
+  <img alt="Versión 0.13.0" src="https://img.shields.io/badge/versión-0.13.0-750946?style=flat-square">
   <img alt="Licencia MIT" src="https://img.shields.io/badge/licencia-MIT-147D64?style=flat-square">
   <img alt="Chrome Manifest V3" src="https://img.shields.io/badge/Chrome-Manifest%20V3-750946?style=flat-square&logo=googlechrome&logoColor=white">
   <img alt="Pruebas aprobadas" src="https://img.shields.io/badge/pruebas-aprobadas-147D64?style=flat-square">
