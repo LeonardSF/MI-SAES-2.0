@@ -190,7 +190,7 @@
     tableModels = [...document.querySelectorAll("table")]
       .filter((table) => !host.contains(table))
       .map((element) => {
-        const rowElements = [...element.querySelectorAll("tr")];
+        const rowElements = [...element.rows];
         if (rowElements.length < 2) return null;
         const matrix = rowElements.map((row) => [...row.querySelectorAll(":scope > th, :scope > td")]
           .map((cell) => cell.innerText.replace(/\s+/g, " ").trim()));
