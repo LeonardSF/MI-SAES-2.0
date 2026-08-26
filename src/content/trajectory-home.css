@@ -48,7 +48,7 @@
 
 @container (min-width: 40rem) {
   .ms-trajectory-home-surface .ms-trajectory-metrics {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .ms-trajectory-home-surface .ms-trajectory-metric,
@@ -72,6 +72,62 @@
   .ms-trajectory-home-surface .ms-trajectory-metric dd {
     text-align: start;
   }
+}
+
+@container (max-width: 30rem) {
+  .ms-trajectory-home-surface .ms-trajectory-metric,
+  .ms-trajectory-home-surface .ms-trajectory-metric:nth-child(odd),
+  .ms-trajectory-home-surface .ms-trajectory-metric:nth-child(even) {
+    grid-template-columns: 1fr;
+    gap: var(--space-2xs);
+  }
+
+  .ms-trajectory-home-surface .ms-trajectory-metric dd {
+    text-align: start;
+  }
+}
+
+.ms-trajectory-attention {
+  display: grid;
+  gap: var(--space-2xs);
+  margin-block-start: var(--space-lg);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--color-warning-soft);
+  color: var(--color-ink);
+}
+
+.ms-trajectory-attention p {
+  margin: 0;
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
+}
+
+.ms-trajectory-disclosure {
+  margin-block-start: var(--space-lg);
+  padding-block-start: var(--space-sm);
+  border-block-start: var(--rule-thin) solid var(--color-rule);
+}
+
+.ms-trajectory-disclosure__summary {
+  min-height: 2.75rem;
+  padding-block: var(--space-sm);
+  color: var(--color-accent);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.ms-trajectory-disclosure__summary::marker {
+  color: var(--color-accent);
+}
+
+.ms-trajectory-disclosure__summary:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.ms-trajectory-disclosure .ms-fact-list {
+  margin-block-start: var(--space-xs);
 }
 
 @media (max-width: 30rem) {

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>IPN-SAES · Evaluación docente</title>
+    <link rel="stylesheet" href="/src/content/page.css">
+    <style>
+      body { margin: 0; background: #888; font: 12px Arial, sans-serif; }
+      main { width: min(760px, 90%); margin: 24px auto; padding: 18px; background: white; }
+      fieldset { margin-block: 12px; padding: 14px; border: 1px solid #aaa; }
+      label { display: inline-flex; margin: 8px; gap: 4px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Sistema de Administración Escolar · Evaluación docente</h1>
+      <form id="evaluation-form">
+        <fieldset>
+          <legend>El profesor explica con claridad</legend>
+          <label><input type="radio" name="q1" value="1"> 1</label>
+          <label><input type="radio" name="q1" value="2"> 2</label>
+          <label><input type="radio" name="q1" value="3"> 3</label>
+          <label><input type="radio" name="q1" value="4"> 4</label>
+          <label><input type="radio" name="q1" value="5"> 5</label>
+        </fieldset>
+        <fieldset>
+          <legend>La retroalimentación fue oportuna</legend>
+          <label><input type="radio" name="q2" value="1"> 1</label>
+          <label><input type="radio" name="q2" value="2"> 2</label>
+          <label><input type="radio" name="q2" value="3"> 3</label>
+          <label><input type="radio" name="q2" value="4"> 4</label>
+          <label><input type="radio" name="q2" value="5"> 5</label>
+        </fieldset>
+        <button type="submit">Enviar evaluación</button>
+      </form>
+    </main>
+    <script src="/tests/fixtures/chrome-mock.js"></script>
+    <script src="/src/shared/core.js"></script>
+    <script src="/src/content/content.js"></script>
+  </body>
+</html>

@@ -1,0 +1,14 @@
+{
+  "name": "mi-saes-2",
+  "version": "0.12.3",
+  "private": true,
+  "description": "Extensión Manifest V3 para mejorar SAES IPN sin sacar datos del navegador.",
+  "scripts": {
+    "test": "node --test tests/*.test.cjs",
+    "check": "node scripts/check.cjs",
+    "package": "node scripts/package.cjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

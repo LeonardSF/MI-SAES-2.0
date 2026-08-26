@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Inicio renovado de alumnos</title>
+    <link rel="stylesheet" href="/src/content/page.css">
+    <style>
+      body { margin: 0; background: #888; font: 11px Arial, sans-serif; }
+      #wrapper { width: min(950px, 100%); min-height: 100vh; margin: 10px auto; background: #e4e4e4; }
+      #header { height: 70px; background: #f2f2f2; text-align: center; }
+      #contentwrapper_psc { width: min(800px, calc(100% - 32px)); margin-inline: auto; }
+      #copy > .container { min-height: 760px; padding: 16px 20px; background: white; }
+      #ctl00_mainCopy_FormView1 { width: min(544px, 100%); border: 1px solid #bbb; }
+      #ctl00_mainCopy_FormView1 td { padding: 8px; }
+    </style>
+  </head>
+  <body>
+    <div id="wrapper">
+      <header id="header">ESCUELA SUPERIOR DE INGENIERÍA MECÁNICA Y ELÉCTRICA<br>UNIDAD CULHUACÁN</header>
+      <main id="contentwrapper_psc">
+        <div id="copy">
+          <div class="container">
+            <table id="ctl00_mainCopy_FormView1">
+              <tr><td><strong>MENÚ PRINCIPAL DE ALUMNOS</strong></td></tr>
+              <tr><td>BUENAS NOCHES</td></tr>
+              <tr><td>ESTUDIANTE</td></tr>
+            </table>
+            <section id="misaes-trajectory-home" aria-label="Mi trayectoria"></section>
+            <p>Consulta los avisos y servicios disponibles para tu sesión.</p>
+            <center data-misaes-home-clutter="true"><img src="/aviso_seg_2014.png" alt="Aviso promocional"></center>
+          </div>
+        </div>
+      </main>
+    </div>
+    <script src="/src/shared/core.js"></script>
+    <script src="/src/content/student-home.js"></script>
+    <script src="/src/content/trajectory-view.js"></script>
+    <script src="/tests/fixtures/trajectory-home-preview.js"></script>
+  </body>
+</html>

@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "MI SAES 2.0",
   "short_name": "MI SAES",
-  "version": "0.9.3",
+  "version": "0.12.3",
   "description": "Herramientas para mejorar tu experiencia en SAES IPN.",
   "permissions": ["storage"],
   "host_permissions": ["*://*.ipn.mx/*"],
@@ -48,6 +48,7 @@
         "src/content/occupancy.js",
         "src/content/trajectory.js",
         "src/content/trajectory-view.js",
+        "src/content/student-home.js",
         "src/content/content.js"
       ],
       "run_at": "document_idle"
@@ -58,7 +59,9 @@
       "resources": [
         "tokens.css",
         "src/content/content.css",
+        "src/content/student-home.css",
         "src/content/trajectory-home.css",
+        "assets/icon-misaes-calendar-candidate.png",
         "assets/fonts/*.woff2"
       ],
       "matches": ["*://*.ipn.mx/*"]

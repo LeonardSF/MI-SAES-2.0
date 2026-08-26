@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Horarios de clase</title>
+    <link rel="stylesheet" href="/src/content/page.css">
+    <style>
+      body { margin: 0; background: #888; font: 11px Arial, sans-serif; }
+      #wrapper { width: 950px; margin: 10px auto; background: #e4e4e4; }
+      #header { height: 70px; position: relative; background: #f2f2f2; }
+      #banner { position: absolute; inset: 12px 150px auto; text-align: center; }
+      #mainnav { width: 940px; padding: 4px 150px; background: #dadada; }
+      #contentwrapper { position: relative; width: 648px; margin-left: 150px; }
+      #floatwrapper { float: left; width: 648px; }
+      #centercolumn { float: right; width: 648px; padding-top: 30px; }
+      #leftcolumn { position: relative; width: 152px; margin-left: -151px; }
+      #rightcolumn { float: left; position: relative; width: 152px; margin-right: -150px; padding-top: 30px; }
+      #breadcrumbs { position: absolute; top: 5px; left: 25px; }
+      #copy .container { height: 600px; margin: 5px; padding: 0 20px 15px; overflow: hidden; border: 1px solid #999; background: white; }
+      #schedule-viewport { height: 15rem; overflow: auto; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border: 1px solid #bbb; padding: 5px; text-align: left; }
+      th { background: #750946; color: white; }
+      .sidebarcontainer { margin: 5px; padding: 6px; background: #efefef; }
+      #footer { clear: both; }
+    </style>
+  </head>
+  <body>
+    <form id="aspnetForm">
+      <div id="wrapper" style="margin-top: 10px">
+        <header id="header"><div id="banner">ESCUELA SUPERIOR DE INGENIERÍA MECÁNICA Y ELÉCTRICA<br>UNIDAD CULHUACÁN</div></header>
+        <nav id="mainnav"><a class="item" href="#">Inicio</a> · <a class="selected" href="#">Académica</a></nav>
+        <div id="contentwrapper">
+          <div id="floatwrapper">
+            <main id="centercolumn">
+              <div id="breadcrumbs"><a href="#">Inicio</a> » Académica » Horarios de clases</div>
+              <div id="copy">
+                <div class="container" style="width: 98%; height: 600px">
+                  <h1>Horarios de clase</h1>
+                  <p>Seleccione criterios de visualización:</p>
+                  <p><label>Carrera <select name="career"><option>INGENIERÍA EN COMPUTACIÓN</option></select></label> <label>Turno <select name="shift"><option>Matutino</option></select></label></p>
+                  <p><label>Plan de estudio <select name="plan"><option>Plan del 1/1/2004</option></select></label> <label>Periodo <select name="period"><option>5</option></select></label> <label><input type="radio" name="mode" value="actual" checked> Periodo actual</label></p>
+                  <span>No existen grupos.</span>
+                  <div id="schedule-viewport">
+                    <table id="ctl00_mainCopy_dbgHorarios">
+                      <thead>
+                        <tr><th>Grupo</th><th>Asignatura</th><th>Profesor</th><th>Edificio</th><th>Salón</th><th>Lun</th><th>Mar</th><th>Mie</th><th>Jue</th><th>Vie</th><th>Sab</th></tr>
+                      </thead>
+                      <tbody>
+                        <tr><td>6CM11</td><td>MODULACIÓN DIGITAL</td><td>PERSONA DOCENTE UNO</td><td>X</td><td>X</td><td>10:00-11:30</td><td>10:00-11:30</td><td>08:30-10:00</td><td>10:00-11:30</td><td></td><td></td></tr>
+                        <tr><td>6CM12</td><td>TEORÍA DE CONTROL ANALÓGICO</td><td>PERSONA DOCENTE DOS</td><td>X</td><td>X</td><td>11:30-13:00</td><td>13:00-14:30</td><td>10:00-11:30</td><td></td><td>08:30-10:00</td><td></td></tr>
+                        <tr><td>6CM13</td><td>SISTEMAS OPERATIVOS</td><td>PERSONA DOCENTE TRES</td><td>X</td><td>X</td><td>07:00-08:30</td><td>11:30-13:00</td><td>11:30-13:00</td><td>10:00-11:30</td><td></td><td></td></tr>
+                        <tr><td>6CM14</td><td>ARQUITECTURA DE COMPUTADORAS</td><td>PERSONA DOCENTE CUATRO</td><td>X</td><td>X</td><td>08:30-10:00</td><td>08:30-10:00</td><td></td><td>11:30-13:00</td><td></td><td></td></tr>
+                        <tr><td>6CM15</td><td>INGENIERÍA DE SOFTWARE</td><td>PERSONA DOCENTE CINCO</td><td>X</td><td>X</td><td>07:00-08:30</td><td></td><td>11:30-13:00</td><td></td><td>07:00-08:30</td><td></td></tr>
+                        <tr><td>6CM16</td><td>METODOLOGÍA DE LA INVESTIGACIÓN</td><td>PERSONA DOCENTE SEIS</td><td>X</td><td>X</td><td>11:30-13:00</td><td></td><td></td><td>07:00-08:30</td><td></td><td></td></tr>
+                        <tr><td>6CM21</td><td>MODULACIÓN DIGITAL</td><td>PERSONA DOCENTE UNO</td><td>X</td><td>X</td><td>08:30-10:00</td><td>08:30-10:00</td><td>10:00-11:30</td><td>11:30-13:00</td><td></td><td></td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <span>No existen grupos.</span>
+                </div>
+              </div>
+            </main>
+            <aside id="leftcolumn"><div id="leftcolcontainer"><div id="subnav" class="sidebarcontainer"><a href="#">Agenda escolar</a><br><a class="selected" href="#">Horarios de clase</a></div></div></aside>
+          </div>
+          <aside id="rightcolumn"><div id="rightcolcontainer" class="sidebarcontainer"><strong>Accesos rápidos</strong><br><a href="#">Agenda escolar</a><br><a href="#">Horarios de ETS</a></div></aside>
+          <footer id="footer">© 2024 SAES · IPN</footer>
+        </div>
+      </div>
+    </form>
+    <script src="/tests/fixtures/chrome-mock.js"></script>
+    <script src="/src/shared/core.js"></script>
+    <script src="/src/content/scanner.js"></script>
+    <script src="/src/content/occupancy.js"></script>
+    <script src="/src/content/trajectory.js"></script>
+    <script src="/src/content/trajectory-view.js"></script>
+    <script src="/src/content/student-home.js"></script>
+    <script src="/src/content/content.js"></script>
+  </body>
+</html>

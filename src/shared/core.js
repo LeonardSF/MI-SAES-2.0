@@ -24,14 +24,38 @@
 
   const OCCUPANCY_REFRESH_MINUTES = Object.freeze([1, 2, 5, 10, 15]);
 
+  const RELEASES = Object.freeze({
+    "0.12.3": Object.freeze({
+      version: "0.12.3",
+      title: "MI SAES se actualizó",
+      items: Object.freeze([
+        "MI SAES 2.0 ahora es un proyecto de código abierto.",
+        "El repositorio incluye guías para contribuir y reportar problemas con seguridad.",
+        "Los ejemplos de SAES usan datos ficticios para proteger la privacidad.",
+        "Mejoras de documentación para estudiantes y personas desarrolladoras."
+      ]),
+      releaseUrl: "https://github.com/LeonardSF/MI-SAES-2.0/releases/tag/v0.12.3"
+    }),
+    "0.12.2": Object.freeze({
+      version: "0.12.2",
+      title: "MI SAES se actualizó",
+      items: Object.freeze([
+        "Nuevo: Mi trayectoria, para consultar tu avance académico.",
+        "Puedes mostrarla u ocultarla desde Mostrar Mi trayectoria.",
+        "Nuevo icono de MI SAES en la cabecera.",
+        "Mejoras en Arma tu Horario."
+      ]),
+      releaseUrl: "https://github.com/LeonardSF/MI-SAES-2.0/releases/tag/v0.12.2"
+    })
+  });
+
   const DEFAULT_SETTINGS = Object.freeze({
     enabled: true,
     hideStudentId: false,
     modules: {
       filters: true,
       schedule: true,
-      trajectoryHome: false,
-      evaluationAssist: true,
+      trajectoryHome: true,
       notes: true,
       tools: true
     }
@@ -52,14 +76,33 @@
 
   function mergeSettings(saved = {}) {
     const defaults = cloneDefaults();
+    const savedModules = saved.modules || {};
     return {
       enabled: saved.enabled !== false,
       hideStudentId: saved.hideStudentId === true,
-      modules: {
-        ...defaults.modules,
-        ...(saved.modules || {})
-      }
+      modules: Object.fromEntries(
+        Object.entries(defaults.modules).map(([module, enabled]) => [
+          module,
+          module === "trajectoryHome" ? true : module in savedModules ? savedModules[module] : enabled
+        ])
+      )
     };
+  }
+
+  function releaseNotes(version) {
+    const release = RELEASES[String(version || "")];
+    if (!release) return null;
+    return {
+      version: release.version,
+      title: release.title,
+      items: [...release.items],
+      releaseUrl: release.releaseUrl
+    };
+  }
+
+  function releaseNoticeForInstall({ reason = "", previousVersion = "", currentVersion = "" } = {}) {
+    if (reason !== "update" || !previousVersion || !releaseNotes(currentVersion)) return null;
+    return { version: String(currentVersion), previousVersion: String(previousVersion) };
   }
 
   function applyStudentIdPrivacy(root, hidden) {
@@ -98,6 +141,23 @@
     }
   }
 
+  function shouldRenderSchedulePlanner({ authenticated = false, offeringsPage = false, context = "" } = {}) {
+    return context !== "login" && (offeringsPage || authenticated);
+  }
+
+  async function clearScannedScheduleData(storage, { catalogKey, plannerKey, occupancyKey } = {}) {
+    if (!storage?.remove) throw new Error("No se pudo acceder al almacenamiento de MI SAES.");
+    const keys = [catalogKey, plannerKey, occupancyKey].filter(Boolean);
+    await storage.remove(keys);
+    return {
+      scanCatalog: null,
+      occupancyCatalog: null,
+      plannerSelection: [],
+      generatedSchedules: [],
+      activeGeneratedSchedule: 0
+    };
+  }
+
   function shouldShowTrajectoryHome({ url = "", enabled = false, authenticated = false } = {}) {
     if (!enabled || !authenticated) return false;
     try {
@@ -105,6 +165,72 @@
     } catch {
       return false;
     }
+  }
+
+  function shouldEnhanceStudentHome({ url = "", enabled = false, authenticated = false } = {}) {
+    if (!enabled || !authenticated) return false;
+    try {
+      return /\/alumnos\/default\.aspx$/i.test(new URL(url).pathname);
+    } catch {
+      return false;
+    }
+  }
+
+  function officialStudentPhotoUrl(candidates = [], pageUrl = "") {
+    let page;
+    try {
+      page = new URL(pageUrl);
+    } catch {
+      return null;
+    }
+
+    const ranked = candidates.flatMap((candidate, index) => {
+      const source = String(candidate?.src || "").trim();
+      if (!source) return [];
+      const descriptor = normalizeText(`${candidate.id || ""} ${candidate.name || ""} ${candidate.alt || ""} ${candidate.className || ""} ${source}`);
+      if (/(captcha|logo|slider|aviso|banner|correo|email|mapa|webresource|icon)/.test(descriptor)) return [];
+      const hasPhotoSignal = /(foto|fotografia|alumno|perfil|credencial|pase[_\s/-]*digital)/.test(descriptor);
+      if (!hasPhotoSignal) return [];
+
+      try {
+        const resolved = new URL(source, page);
+        if (!/^https?:$/.test(resolved.protocol) || resolved.origin !== page.origin) return [];
+        const score = /(foto|fotografia)/.test(descriptor) ? 3 : 2;
+        return [{ url: resolved.href, score, index }];
+      } catch {
+        return [];
+      }
+    });
+
+    ranked.sort((left, right) => right.score - left.score || left.index - right.index);
+    return ranked[0]?.url || null;
+  }
+
+  function isSameOriginUrl(url, expectedOrigin) {
+    try {
+      return new URL(url).origin === new URL(expectedOrigin).origin;
+    } catch {
+      return false;
+    }
+  }
+
+  function studentPhotoPageUrl(origin) {
+    try {
+      return new URL("/Alumnos/info_alumnos/Datos_Alumno.aspx", origin).href;
+    } catch {
+      return null;
+    }
+  }
+
+  function studentGreetingModel(lines = []) {
+    const values = lines.map((line) => String(line || "").replace(/\s+/g, " ").trim()).filter(Boolean);
+    const greetingIndex = values.findIndex((line) => /^(buenos d[ií]as|buenas tardes|buenas noches)\b/i.test(line));
+    const rawGreeting = greetingIndex >= 0 ? values[greetingIndex] : "";
+    const name = values.slice(greetingIndex + 1).find((line) => !/men[uú] principal de alumnos/i.test(line)) || "Estudiante";
+    const greeting = rawGreeting
+      ? `${rawGreeting.charAt(0).toUpperCase()}${rawGreeting.slice(1).toLocaleLowerCase("es-MX")}`
+      : "Bienvenido a tu espacio académico";
+    return { greeting, name };
   }
 
   function detectContext({ url = "", title = "", text = "", authenticated = false } = {}) {
@@ -300,6 +426,54 @@
     return combinations;
   }
 
+  function plannerDiagnostics(selected = [], { blockedSubjects = [] } = {}) {
+    if (!selected.length) {
+      return {
+        state: "empty",
+        title: "Selecciona tus grupos candidatos",
+        detail: "Marca al menos un grupo para continuar.",
+        conflicts: [],
+        blockedSubjects: []
+      };
+    }
+
+    const blocked = [...new Set(blockedSubjects.map(normalizeText).filter(Boolean))];
+    const conflicts = findScheduleConflicts(selected.flatMap((offering) => offering.entries || []))
+      .map((conflict) => ({
+        ...conflict,
+        leftOffering: selected.find((offering) => (offering.entries || []).includes(conflict.left)) || null,
+        rightOffering: selected.find((offering) => (offering.entries || []).includes(conflict.right)) || null
+      }));
+
+    if (blocked.length) {
+      return {
+        state: "blocked",
+        title: blocked.length === 1 ? "Falta una alternativa con lugares" : `Faltan alternativas con lugares para ${blocked.length} materias`,
+        detail: "Los grupos llenos no se incluirán. Elige al menos una alternativa disponible por materia.",
+        conflicts,
+        blockedSubjects: blocked
+      };
+    }
+
+    if (conflicts.length) {
+      return {
+        state: "conflict",
+        title: `${conflicts.length} traslape${conflicts.length === 1 ? "" : "s"} por resolver`,
+        detail: "Quita un grupo o agrega otra alternativa; el generador intentará evitar estos cruces.",
+        conflicts,
+        blockedSubjects: []
+      };
+    }
+
+    return {
+      state: "ready",
+      title: "Selección lista para generar",
+      detail: "No detectamos traslapes entre tus candidatos.",
+      conflicts: [],
+      blockedSubjects: []
+    };
+  }
+
   function escapeIcs(value) {
     return String(value ?? "")
       .replace(/\\/g, "\\\\")
@@ -405,17 +579,34 @@
     };
   }
 
+  function generatedScheduleCopy(count, index = 0) {
+    const total = Math.max(0, Number(count) || 0);
+    return {
+      title: `${total} horario${total === 1 ? "" : "s"} sin empalmes`,
+      option: `Horario ${Math.max(0, Number(index) || 0) + 1}`
+    };
+  }
+
   const api = Object.freeze({
     DEFAULT_SETTINGS,
     OCCUPANCY_REFRESH_MINUTES,
     normalizeText,
     cloneDefaults,
     mergeSettings,
+    releaseNotes,
+    releaseNoticeForInstall,
     normalizeOccupancyRefreshMinutes,
     applyStudentIdPrivacy,
     misProfesoresSearchUrl,
     schedulePageUrl,
+    shouldRenderSchedulePlanner,
+    clearScannedScheduleData,
     shouldShowTrajectoryHome,
+    shouldEnhanceStudentHome,
+    officialStudentPhotoUrl,
+    isSameOriginUrl,
+    studentPhotoPageUrl,
+    studentGreetingModel,
     detectContext,
     parseTimeRange,
     formatMinutes,
@@ -423,12 +614,14 @@
     deriveScheduleEntries,
     deriveCourseOfferings,
     generateScheduleCombinations,
+    plannerDiagnostics,
     findScheduleConflicts,
     scheduleToIcs,
     filterRowIndexes,
     filterPlannerOfferings,
     tableToCsv,
-    calculateAverage
+    calculateAverage,
+    generatedScheduleCopy
   });
 
   globalScope.MISaesCore = api;

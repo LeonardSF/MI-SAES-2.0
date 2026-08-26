@@ -12,6 +12,20 @@
       .toLowerCase();
   }
 
+  function markUrl(doc, url) {
+    Object.defineProperty(doc, "__misaesUrl", { value: url, configurable: true });
+    return doc;
+  }
+
+  function parseDocument(html, url) {
+    return markUrl(new DOMParser().parseFromString(html, "text/html"), url);
+  }
+
+  function formActionUrl(doc, form, fallbackUrl = "") {
+    const baseUrl = doc?.__misaesUrl || fallbackUrl || globalScope.location?.href || "";
+    return new URL(form?.getAttribute("action") || baseUrl, baseUrl).href;
+  }
+
   function usefulOptions(select) {
     if (!select) return [];
     return [...select.options].filter((option) => {
@@ -64,7 +78,8 @@
     if (!control) throw new Error("Falta un selector requerido de SAES.");
     const { form, params } = formBody(doc, control, value);
     onRequest?.();
-    const response = await fetch(new URL(form.getAttribute("action") || location.href, location.href), {
+    const baseUrl = doc.__misaesUrl || globalScope.location?.href;
+    const response = await fetch(formActionUrl(doc, form, baseUrl), {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
@@ -74,7 +89,7 @@
     });
     if (!response.ok) throw new Error(`SAES respondió con código ${response.status}.`);
     const html = await response.text();
-    const parsed = new DOMParser().parseFromString(html, "text/html");
+    const parsed = parseDocument(html, response.url || baseUrl);
     if (!parsed.querySelector("#ctl00_mainCopy_dbgHorarios") && /iniciar sesion|captcha/i.test(parsed.body?.innerText || "")) {
       throw new Error("La sesión de SAES terminó. Inicia sesión y vuelve a escanear.");
     }
@@ -130,17 +145,8 @@
     return parsed.length;
   }
 
-  async function scan({ rootDocument = document, core = globalScope.MISaesCore, signal, onProgress, includeNext = true, maxRequests = 90 } = {}) {
+  async function scan({ rootDocument, url, core = globalScope.MISaesCore, signal, onProgress, includeNext = true, maxRequests = 90 } = {}) {
     if (!core) throw new Error("No se cargó el lector de horarios de MI SAES.");
-    const initial = new DOMParser().parseFromString(rootDocument.documentElement.outerHTML, "text/html");
-    const initialControls = discoverControls(initial);
-    if (!initialControls.career || !initialControls.shift || !initialControls.period) {
-      throw new Error("No pude identificar Carrera, Turno y Periodo en esta versión de SAES.");
-    }
-    const career = selectedLabel(initialControls.career);
-    const modeIndexes = includeNext && initialControls.radios.length > 1 ? [0, 1] : [initialControls.radios.findIndex((radio) => radio.checked)].filter((index) => index >= 0);
-    if (!modeIndexes.length) modeIndexes.push(0);
-    const offeringMap = new Map();
     let requests = 0;
     let leaves = 0;
     const requestOptions = {
@@ -150,6 +156,28 @@
         if (requests > maxRequests) throw new Error(`El escaneo superó el límite seguro de ${maxRequests} consultas.`);
       }
     };
+    let initial;
+    if (rootDocument) {
+      const sourceUrl = url || rootDocument.__misaesUrl || rootDocument.URL || globalScope.location?.href;
+      initial = parseDocument(rootDocument.documentElement.outerHTML, sourceUrl);
+    } else {
+      if (!url) throw new Error("Falta la dirección de Horarios de SAES.");
+      requestOptions.onRequest();
+      const response = await fetch(url, { credentials: "include", redirect: "follow", signal });
+      if (!response.ok) throw new Error(`SAES respondió con código ${response.status} al abrir Horarios.`);
+      initial = parseDocument(await response.text(), response.url || url);
+      if (/iniciar sesion|captcha/i.test(initial.body?.innerText || "")) {
+        throw new Error("La sesión de SAES terminó. Inicia sesión y vuelve a escanear.");
+      }
+    }
+    const initialControls = discoverControls(initial);
+    if (!initialControls.career || !initialControls.shift || !initialControls.period) {
+      throw new Error("No pude identificar Carrera, Turno y Periodo en esta versión de SAES.");
+    }
+    const career = selectedLabel(initialControls.career);
+    const modeIndexes = includeNext && initialControls.radios.length > 1 ? [0, 1] : [initialControls.radios.findIndex((radio) => radio.checked)].filter((index) => index >= 0);
+    if (!modeIndexes.length) modeIndexes.push(0);
+    const offeringMap = new Map();
 
     for (const modeIndex of modeIndexes) {
       if (signal?.aborted) throw new DOMException("Escaneo cancelado", "AbortError");
@@ -195,7 +223,7 @@
     };
   }
 
-  const api = Object.freeze({ discoverControls, usefulOptions, tableModel, scan });
+  const api = Object.freeze({ discoverControls, usefulOptions, tableModel, formActionUrl, scan });
   globalScope.MISaesScanner = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

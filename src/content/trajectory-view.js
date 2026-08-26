@@ -118,13 +118,48 @@
 
   function buildEmbeddedModel(snapshot) {
     const model = buildModel(snapshot);
+    const reenrollment = snapshot?.reenrollment || {};
+    const periodParts = [];
+    if (finite(reenrollment.periodsCompleted) !== null) periodParts.push(`${reenrollment.periodsCompleted} cursados`);
+    if (finite(reenrollment.periodsAvailable) !== null) periodParts.push(`${reenrollment.periodsAvailable} disponibles`);
+    const primaryMetrics = model.metrics.filter((item) => ["Promedio reportado", "Materias reprobadas"].includes(item.label));
+    if (periodParts.length) primaryMetrics.push({ label: "Periodos académicos", value: periodParts.join(" · ") });
+    const authorizedLoad = model.metrics.find((item) => item.label === "Carga autorizada");
+    if (authorizedLoad) primaryMetrics.push(authorizedLoad);
+
+    const statusRecords = finite(snapshot?.status?.records);
+    const repeatedRecords = finite(snapshot?.status?.repeatedRecords) || 0;
+    const attention = statusRecords > 0 ? {
+      title: "Revisa Estado General",
+      detail: `${statusRecords} ${statusRecords === 1 ? "materia figura" : "materias figuran"} en seguimiento${repeatedRecords ? `; ${repeatedRecords} ${repeatedRecords === 1 ? "aparece" : "aparecen"} más de una vez` : ""}.`
+    } : null;
+
     return {
       ...model,
-      metrics: model.metrics.filter((item) => ["Promedio reportado", "Materias reprobadas", "Carga autorizada"].includes(item.label)),
-      kardex: null,
-      status: null,
+      progress: model.progress && finite(reenrollment.remainingCredits) !== null
+        ? { ...model.progress, detail: `${model.progress.detail} · faltan ${reenrollment.remainingCredits}` }
+        : model.progress,
+      metrics: primaryMetrics,
+      attention,
       sources: []
     };
+  }
+
+  function embeddedDetailFacts(model = {}) {
+    const facts = [];
+    if (model.kardex) {
+      facts.push(`${model.kardex.records} registros en Kárdex: ${model.kardex.gradesFromSix} con calificación de 6 a 10, ${model.kardex.gradesBelowSix} menores a 6 y ${model.kardex.withoutNumericGrade} sin calificación numérica.`);
+    }
+    const loads = [
+      ["mínima", model.loads?.minimum],
+      ["media", model.loads?.medium],
+      ["máxima", model.loads?.maximum]
+    ].filter(([, value]) => finite(value) !== null).map(([label, value]) => `${label} ${value}`);
+    if (loads.length) {
+      const ranges = loads.length === 1 ? loads[0] : `${loads.slice(0, -1).join(", ")} y ${loads.at(-1)}`;
+      facts.push(`Rangos de carga: ${ranges} créditos.`);
+    }
+    return facts;
   }
 
   function element(document, tag, className, text) {
@@ -208,6 +243,27 @@
     parent.append(section);
   }
 
+  function renderAttention(document, parent, attention) {
+    if (!attention) return;
+    const notice = element(document, "aside", "ms-trajectory-attention");
+    notice.append(
+      element(document, "strong", "", attention.title),
+      element(document, "p", "", attention.detail)
+    );
+    parent.append(notice);
+  }
+
+  function renderEmbeddedDetails(document, parent, model) {
+    const facts = embeddedDetailFacts(model);
+    if (!facts.length) return;
+    const details = element(document, "details", "ms-trajectory-disclosure");
+    details.append(element(document, "summary", "ms-trajectory-disclosure__summary", "Ver detalle académico"));
+    const list = element(document, "ul", "ms-fact-list");
+    facts.forEach((fact) => list.append(element(document, "li", "", fact)));
+    details.append(list);
+    parent.append(details);
+  }
+
   function render(container, { snapshot = null, activity = null, onRefresh = () => {}, embedded = false } = {}) {
     const document = container.ownerDocument;
     const model = embedded ? buildEmbeddedModel(snapshot) : buildModel(snapshot);
@@ -229,7 +285,12 @@
 
     renderProgress(document, container, model.progress);
     renderMetrics(document, container, model.metrics);
-    renderDetails(document, container, model);
+    if (embedded) {
+      renderAttention(document, container, model.attention);
+      renderEmbeddedDetails(document, container, model);
+    } else {
+      renderDetails(document, container, model);
+    }
     if (!embedded) renderSources(document, container, sources.length ? sources : sourceModels());
 
     const actions = element(document, "div", "ms-row ms-trajectory-actions");
@@ -246,7 +307,7 @@
     container.append(actions);
   }
 
-  const api = Object.freeze({ buildEmbeddedModel, buildModel, render });
+  const api = Object.freeze({ buildEmbeddedModel, buildModel, embeddedDetailFacts, render });
   globalScope.MISaesTrajectoryView = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

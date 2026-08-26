@@ -1,0 +1,111 @@
+@import url("./content.css");
+
+:host {
+  position: static;
+  inset: auto;
+  z-index: auto;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  color-scheme: light;
+  font-size: 16px;
+  pointer-events: auto;
+  container-type: inline-size;
+}
+
+.ms-student-home {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-lg);
+  align-items: center;
+  min-width: 0;
+  margin-block: var(--space-xl) 0;
+  padding: var(--space-lg);
+  overflow: hidden;
+  border: var(--rule-thin) solid var(--color-rule-2);
+  border-radius: var(--radius-lg);
+  background: var(--color-accent-soft);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  line-height: 1.5;
+}
+
+.ms-student-home__photo {
+  width: 5.5rem;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: var(--color-paper-2);
+}
+
+.ms-student-home__photo[hidden] {
+  display: none;
+}
+
+.ms-student-home__photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+
+.ms-student-home__copy {
+  min-width: 0;
+  max-width: 65ch;
+}
+
+.ms-student-home__name,
+.ms-student-home__greeting,
+.ms-student-home__detail {
+  margin: 0;
+}
+
+.ms-student-home__name {
+  color: var(--color-accent);
+  font-family: var(--font-display);
+  font-size: clamp(var(--text-lg), 4cqi, var(--text-xl));
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.ms-student-home__greeting {
+  margin-block-start: var(--space-xs);
+  color: var(--color-ink-2);
+  font-size: var(--text-base);
+  font-weight: 700;
+}
+
+.ms-student-home__detail {
+  margin-block-start: var(--space-2xs);
+  color: var(--color-neutral);
+  font-size: var(--text-sm);
+}
+
+@container (max-width: 28rem) {
+  .ms-student-home {
+    gap: var(--space-md);
+    padding: var(--space-md);
+  }
+
+  .ms-student-home__photo {
+    width: 4.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ms-student-home__photo:not([hidden]) {
+    animation: ms-student-photo-in var(--dur-medium) var(--ease-out) both;
+  }
+}
+
+@keyframes ms-student-photo-in {
+  from {
+    opacity: 0;
+    clip-path: inset(8% 0 0);
+  }
+}

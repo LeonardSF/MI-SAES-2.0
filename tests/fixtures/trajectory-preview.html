@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Vista previa de Mi trayectoria</title>
+    <link rel="stylesheet" href="/src/content/content.css">
+    <style>
+      body { margin: 0; background: #d8d3d5; }
+      .preview-shell { width: min(100%, 76rem); min-height: 100vh; margin-inline-start: auto; background: var(--color-paper); }
+    </style>
+  </head>
+  <body>
+    <main class="preview-shell ms-panel__body">
+      <nav class="ms-view-nav" aria-label="Apartados de MI SAES">
+        <button type="button">Horario</button>
+        <button type="button" data-active="true" aria-current="page">Trayectoria</button>
+        <button type="button">Herramientas</button>
+      </nav>
+      <div class="ms-view" id="trajectory-preview"></div>
+    </main>
+    <script src="/src/content/trajectory-view.js"></script>
+    <script src="/tests/fixtures/trajectory-preview.js"></script>
+  </body>
+</html>

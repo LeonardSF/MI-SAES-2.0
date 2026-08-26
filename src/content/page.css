@@ -1,4 +1,9 @@
-/* MI SAES no modifica la apariencia del sitio original. */
+/* Las mejoras del portal se limitan a selectores explícitos y reversibles. */
+[data-misaes-home-source="true"],
+[data-misaes-home-clutter="true"] {
+  display: none !important;
+}
+
 [data-misaes-filtered="true"] {
   display: none !important;
 }

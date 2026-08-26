@@ -1,6 +1,6 @@
 # Política de privacidad de MI SAES 2.0
 
-Última actualización: 25 de agosto de 2026.
+Última actualización: 26 de agosto de 2026.
 
 MI SAES 2.0 funciona localmente dentro del navegador. No opera servidores propios, no crea perfiles de usuario y no vende, comparte ni transmite información personal o escolar.
 

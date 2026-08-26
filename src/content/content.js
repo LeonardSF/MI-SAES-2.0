@@ -4,7 +4,8 @@
   const core = globalThis.MISaesCore;
   const trajectory = globalThis.MISaesTrajectory;
   const trajectoryView = globalThis.MISaesTrajectoryView;
-  if (!core || !trajectory || !trajectoryView || document.getElementById("misaes-root")) return;
+  const studentHome = globalThis.MISaesStudentHome;
+  if (!core || !trajectory || !trajectoryView || !studentHome || document.getElementById("misaes-root")) return;
 
   const pageText = document.body?.innerText?.slice(0, 16000) || "";
   const normalizedPage = core.normalizeText(`${document.title} ${pageText}`);
@@ -43,6 +44,9 @@
     },
     async set(value) {
       return chrome.storage.local.set(value);
+    },
+    async remove(keys) {
+      return chrome.storage.local.remove(keys);
     }
   };
 
@@ -53,7 +57,8 @@
   const occupancyPreferenceKey = `occupancy-enabled:${location.origin}`;
   const occupancyRefreshPreferenceKey = `occupancy-refresh-minutes:${location.origin}`;
   const trajectoryKey = `trajectory:${location.origin}`;
-  const storedState = await storage.get(["settings", plannerKey, catalogKey, preparedKey, occupancyKey, occupancyPreferenceKey, occupancyRefreshPreferenceKey, trajectoryKey]);
+  const releaseNoticeKey = "releaseNotice";
+  const storedState = await storage.get(["settings", plannerKey, catalogKey, preparedKey, occupancyKey, occupancyPreferenceKey, occupancyRefreshPreferenceKey, trajectoryKey, releaseNoticeKey]);
   const savedSettings = storedState.settings || {};
   let settings = core.mergeSettings(savedSettings);
   let tableModels = [];
@@ -68,6 +73,9 @@
   let trajectoryActivity = null;
   let trajectoryController = null;
   let trajectoryHomeHost = null;
+  let studentHomeHost = null;
+  let studentHomeView = null;
+  let studentPhotoController = null;
   let occupancyController = null;
   let occupancyTimer = 0;
   let refreshOccupancyView = null;
@@ -81,12 +89,12 @@
   let activeGeneratedSchedule = 0;
   const isOfferingsCatalog = /\/academica\/horarios\.aspx$/i.test(location.pathname) || (isLocalPreview && /\/saes-schedule\.html$/i.test(location.pathname));
   const isReenrollmentPage = /\/alumnos\/reinscripciones\//i.test(location.pathname) || context === "reenrollment";
-  const extensionVersion = chrome.runtime.getManifest?.().version || "0.9.3";
+  const extensionVersion = chrome.runtime.getManifest?.().version || "0.12.3";
+  let releaseNotice = storedState[releaseNoticeKey] || null;
   let isOpen = false;
   let activeView = "schedule";
   let previousFocus = null;
   const bodyWasInert = document.body.inert;
-  let evaluationUndo = [];
   let noteSaveTimer = 0;
 
   const host = document.createElement("div");
@@ -102,21 +110,39 @@
   app.className = "ms-app";
   app.dataset.open = "false";
   app.innerHTML = `
-    <button class="ms-launcher" type="button" aria-label="Abrir MI SAES 2.0" aria-expanded="false">
-      <span class="ms-launcher__mark" aria-hidden="true">MI</span>
-      <span class="ms-launcher__dot" aria-hidden="true"></span>
+    <button class="ms-launcher" type="button" aria-label="Abrir MI SAES 2.0: arma tu horario sin empalmes" aria-expanded="false">
+      <span class="ms-launcher__mark" aria-hidden="true">
+        <img class="ms-launcher__icon" src="${chrome.runtime.getURL("assets/icon-misaes-calendar-candidate.png")}" alt="" width="44" height="44">
+        <span class="ms-launcher__dot"></span>
+      </span>
+      <span class="ms-launcher__copy">
+        <strong class="ms-launcher__title">MI SAES 2.0</strong>
+        <span class="ms-launcher__message">Arma tu horario sin empalmes</span>
+      </span>
     </button>
-    <button class="ms-backdrop" type="button" aria-label="Cerrar panel"></button>
     <section class="ms-panel" role="dialog" aria-modal="true" aria-labelledby="ms-title" aria-hidden="true">
       <header class="ms-panel__header">
         <div class="ms-brand">
+          <img class="ms-brand__icon" src="${chrome.runtime.getURL("assets/icon-misaes-calendar-candidate.png")}" alt="" width="32" height="32">
           <h1 class="ms-brand__name" id="ms-title">MI SAES 2.0</h1>
           <p class="ms-brand__context"></p>
         </div>
-        <button class="ms-icon-button" type="button" data-action="close" aria-label="Cerrar MI SAES 2.0">
-          <svg class="ms-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
-        </button>
+        <nav class="ms-surface-switch" aria-label="Cambiar entre SAES y MI SAES">
+          <button type="button" data-action="show-saes" aria-pressed="false">SAES</button>
+          <button type="button" data-action="show-misaes" aria-pressed="true">MI SAES</button>
+        </nav>
       </header>
+      <aside class="ms-release-banner" aria-labelledby="ms-release-title" hidden>
+        <div class="ms-release-banner__copy">
+          <span class="ms-release-banner__version"></span>
+          <h2 id="ms-release-title"></h2>
+          <ul class="ms-release-banner__items"></ul>
+        </div>
+        <div class="ms-release-banner__actions">
+          <a class="ms-button ms-button--quiet" data-release-link target="_blank" rel="noopener noreferrer">Ver todos los cambios</a>
+          <button class="ms-button ms-button--primary" type="button" data-action="dismiss-release">Entendido</button>
+        </div>
+      </aside>
       <main class="ms-panel__body">
         <div class="ms-view" id="ms-view"></div>
       </main>
@@ -132,12 +158,29 @@
   document.documentElement.append(host);
 
   const launcher = shadow.querySelector(".ms-launcher");
-  const backdrop = shadow.querySelector(".ms-backdrop");
   const panel = shadow.querySelector(".ms-panel");
   const panelBody = shadow.querySelector(".ms-panel__body");
+  const releaseBanner = shadow.querySelector(".ms-release-banner");
   const view = shadow.querySelector(".ms-view");
   const live = shadow.querySelector(".ms-live");
   shadow.querySelector(".ms-brand__context").textContent = `${contextNames[context]} · ${location.hostname} · v${extensionVersion}`;
+
+  function renderReleaseBanner() {
+    const release = releaseNotice?.version === extensionVersion ? core.releaseNotes(releaseNotice.version) : null;
+    releaseBanner.hidden = !release;
+    if (!release) return;
+    releaseBanner.querySelector(".ms-release-banner__version").textContent = `Versión ${release.version}`;
+    releaseBanner.querySelector("#ms-release-title").textContent = release.title;
+    const items = releaseBanner.querySelector(".ms-release-banner__items");
+    items.replaceChildren(...release.items.map((item) => {
+      const entry = document.createElement("li");
+      entry.textContent = item;
+      return entry;
+    }));
+    releaseBanner.querySelector("[data-release-link]").href = release.releaseUrl;
+  }
+
+  renderReleaseBanner();
 
   function collectTables() {
     syncScheduleAvailabilityColumn();
@@ -173,12 +216,13 @@
       .filter(Boolean);
     linkTeacherColumns();
     scheduleEntries = core.deriveScheduleEntries(tableModels);
-    const visibleOfferings = core.deriveCourseOfferings(tableModels);
-    const pageControls = globalThis.MISaesScanner?.discoverControls(document) || {};
+    const visibleOfferings = isOfferingsCatalog ? core.deriveCourseOfferings(tableModels) : [];
+    const pageControls = isOfferingsCatalog ? globalThis.MISaesScanner?.discoverControls(document) || {} : {};
     const careerControl = pageControls.career;
-    visibleCareer = careerControl?.selectedOptions?.[0]?.textContent?.trim() || "";
-    visiblePlan = pageControls.plan?.selectedOptions?.[0]?.textContent?.trim() || "";
-    catalogMatchesPage = !scanCatalog || !visibleCareer || core.normalizeText(scanCatalog.career) === core.normalizeText(visibleCareer);
+    visibleCareer = careerControl?.selectedOptions?.[0]?.textContent?.trim() || (!isOfferingsCatalog ? scanCatalog?.career || "" : "");
+    visiblePlan = pageControls.plan?.selectedOptions?.[0]?.textContent?.trim()
+      || (!isOfferingsCatalog ? scanCatalog?.offerings?.find((item) => item.source?.plan)?.source?.plan || "" : "");
+    catalogMatchesPage = !isOfferingsCatalog || !scanCatalog || !visibleCareer || core.normalizeText(scanCatalog.career) === core.normalizeText(visibleCareer);
     courseOfferings = scanCatalog?.offerings?.length && catalogMatchesPage ? scanCatalog.offerings : visibleOfferings;
     conflicts = isOfferingsCatalog ? [] : core.findScheduleConflicts(scheduleEntries);
   }
@@ -209,6 +253,7 @@
     if (!settings.enabled && isOpen) setOpen(false);
     host.hidden = !settings.enabled;
     core.applyStudentIdPrivacy(document, settings.enabled && settings.hideStudentId);
+    syncStudentHome();
     syncTrajectoryHome();
   }
 
@@ -340,13 +385,14 @@
     isOpen = Boolean(nextOpen);
     app.dataset.open = String(isOpen);
     launcher.setAttribute("aria-expanded", String(isOpen));
+    launcher.tabIndex = isOpen ? -1 : 0;
     panel.setAttribute("aria-hidden", String(!isOpen));
     if (isOpen) {
-      previousFocus = document.activeElement;
+      previousFocus = shadow.activeElement || document.activeElement;
       document.body.inert = true;
       collectTables();
       renderView();
-      requestAnimationFrame(() => shadow.querySelector('[data-action="close"]')?.focus());
+      requestAnimationFrame(() => shadow.querySelector('[data-action="show-saes"]')?.focus());
     } else {
       document.body.inert = bodyWasInert;
       if (previousFocus instanceof HTMLElement) previousFocus.focus({ preventScroll: true });
@@ -410,7 +456,7 @@
       ["Buscar tablas", "tables", settings.modules.filters],
       [isOfferingsCatalog ? "Armar horario" : isReenrollmentPage ? "Ver horario preparado" : "Revisar horario", "schedule", settings.modules.schedule],
       ["Abrir notas", "notes", settings.modules.notes],
-      [context === "evaluation" ? "Asistir evaluación" : "Calcular promedio", "tools", settings.modules.tools || settings.modules.evaluationAssist]
+      ["Calcular promedio", "tools", settings.modules.tools]
     ];
     available.filter(([, , enabled]) => enabled).forEach(([label, target]) => {
       const button = document.createElement("button");
@@ -649,7 +695,7 @@
     return wrapper;
   }
 
-  function renderCalendarExport(entries, parent, label = "propuesta") {
+  function renderCalendarExport(entries, parent, label = "horario") {
     const exportSection = document.createElement("section");
     exportSection.className = "ms-export-strip";
     const dateField = document.createElement("label");
@@ -707,7 +753,29 @@
     const lede = document.createElement("p");
     lede.className = "ms-lede";
     lede.textContent = "Compara grupos, guarda alternativas y genera un horario sin empalmes. Nada se envía a SAES.";
-    intro.append(heading, lede);
+    const workflow = document.createElement("ol");
+    workflow.className = "ms-planner-steps";
+    const workflowSteps = [
+      ["Escanea", "Carga todas las materias"],
+      ["Elige", "Marca tus grupos candidatos"],
+      ["Genera", "Resuelve avisos y compara"]
+    ].map(([title, detail], index) => {
+      const item = document.createElement("li");
+      item.className = "ms-planner-step";
+      const number = document.createElement("span");
+      number.className = "ms-planner-step__number";
+      number.textContent = String(index + 1);
+      const copy = document.createElement("span");
+      const strong = document.createElement("strong");
+      strong.textContent = title;
+      const small = document.createElement("small");
+      small.textContent = detail;
+      copy.append(strong, small);
+      item.append(number, copy);
+      workflow.append(item);
+      return item;
+    });
+    intro.append(heading, lede, workflow);
     view.append(intro);
 
     const scanSection = document.createElement("section");
@@ -715,7 +783,7 @@
     const scanCopy = document.createElement("div");
     scanCopy.className = "ms-scan__copy";
     const scanTitle = document.createElement("strong");
-    scanTitle.textContent = scanCatalog && catalogMatchesPage ? `Oferta escaneada · ${scanCatalog.career}` : "Escanea la oferta completa de tu carrera";
+    scanTitle.textContent = scanCatalog && catalogMatchesPage ? `Materias escaneadas · ${scanCatalog.career}` : "Escanea las materias de tu carrera";
     const scanDetail = document.createElement("p");
     scanDetail.className = "ms-helper";
     if (scanCatalog && catalogMatchesPage) {
@@ -736,20 +804,27 @@
     scanButton.className = "ms-button ms-button--primary";
     function scanButtonLabel() {
       if (occupancyEnabled) return scanCatalog ? "Actualizar todo" : "Escanear todo";
-      return scanCatalog ? "Actualizar oferta" : "Escanear oferta";
+      return scanCatalog ? "Actualizar materias" : "Escanear materias";
     }
     scanButton.textContent = scanButtonLabel();
+    const clearScanButton = document.createElement("button");
+    clearScanButton.type = "button";
+    clearScanButton.className = "ms-button ms-button--clear";
+    clearScanButton.textContent = "Limpiar";
+    clearScanButton.hidden = !scanCatalog;
+    clearScanButton.setAttribute("aria-label", "Limpiar materias escaneadas");
     const stopButton = document.createElement("button");
     stopButton.type = "button";
     stopButton.className = "ms-button";
     stopButton.textContent = "Detener";
     stopButton.hidden = true;
-    scanActions.append(scanButton, stopButton);
+    scanActions.append(scanButton, clearScanButton, stopButton);
     const scanProgress = document.createElement("progress");
     scanProgress.className = "ms-scan__progress";
     scanProgress.hidden = true;
     const scanStatus = document.createElement("p");
-    scanStatus.className = "ms-helper";
+    scanStatus.className = "ms-helper ms-scan__status";
+    scanStatus.setAttribute("role", "status");
     scanStatus.setAttribute("aria-live", "polite");
     const occupancyTools = document.createElement("div");
     occupancyTools.className = "ms-occupancy-tools";
@@ -789,7 +864,9 @@
         return;
       }
       if (state === "error") {
-        occupancyStatus.textContent = `${message} Se conservaron los últimos datos disponibles.`;
+        occupancyStatus.textContent = occupancyCatalog?.records?.length
+          ? `${message} Se conservaron los últimos datos disponibles.`
+          : `${message} No se mostrarán lugares hasta que SAES responda.`;
         occupancyStatus.dataset.state = "error";
         return;
       }
@@ -815,6 +892,9 @@
     scanSection.append(scanCopy, scanActions, scanProgress, scanStatus, occupancyTools);
     view.append(scanSection);
     refreshOccupancyView = updateOccupancyStatus;
+    workflowSteps[0].dataset.state = courseOfferings.length ? "complete" : "active";
+    workflowSteps[1].dataset.state = courseOfferings.length ? "active" : "pending";
+    workflowSteps[2].dataset.state = "pending";
 
     if (preparedSchedule) {
       const prepared = document.createElement("section");
@@ -851,14 +931,16 @@
       scanController = new AbortController();
       scanButton.disabled = true;
       scanButton.dataset.state = "loading";
-      scanButton.textContent = "Escaneando oferta";
+      scanButton.textContent = "Escaneando materias";
+      delete scanStatus.dataset.state;
       stopButton.hidden = false;
       scanProgress.hidden = false;
       scanStatus.textContent = "Preparando los selectores de SAES…";
       const previousSelected = courseOfferings.filter((offering) => plannerSelection.has(offering.id));
       try {
         const result = await globalThis.MISaesScanner.scan({
-          rootDocument: document,
+          rootDocument: isOfferingsCatalog ? document : undefined,
+          url: scheduleDestination(),
           core,
           signal: scanController.signal,
           includeNext: false,
@@ -884,9 +966,14 @@
       } catch (error) {
         if (error?.name === "AbortError") {
           scanStatus.textContent = "Escaneo detenido. Se conserva el catálogo anterior.";
+          scanStatus.dataset.state = "warning";
           announce("Escaneo detenido");
         } else {
-          scanStatus.textContent = error?.message || "No fue posible completar el escaneo.";
+          const recovery = scanCatalog
+            ? "Conservamos las materias escaneadas anteriormente. Corrige el problema y vuelve a intentarlo."
+            : "Revisa tu sesión y los filtros visibles de SAES; después vuelve a intentarlo.";
+          scanStatus.textContent = `No pudimos actualizar las materias. ${error?.message || "SAES no devolvió una respuesta válida."} ${recovery}`;
+          scanStatus.dataset.state = "error";
           scanButton.dataset.state = "error";
           announce(scanStatus.textContent);
         }
@@ -899,10 +986,34 @@
         scanProgress.hidden = true;
       }
     });
+    clearScanButton.addEventListener("click", async () => {
+      if (scanController || !scanCatalog) return;
+      const confirmed = globalThis.confirm("¿Limpiar las materias escaneadas? También se quitará la selección actual.");
+      if (!confirmed) return;
+      clearScanButton.disabled = true;
+      try {
+        clearTimeout(occupancyTimer);
+        occupancyController?.abort();
+        const cleared = await core.clearScannedScheduleData(storage, { catalogKey, plannerKey, occupancyKey });
+        scanCatalog = cleared.scanCatalog;
+        occupancyCatalog = cleared.occupancyCatalog;
+        plannerSelection = new Set(cleared.plannerSelection);
+        generatedSchedules = cleared.generatedSchedules;
+        activeGeneratedSchedule = cleared.activeGeneratedSchedule;
+        courseOfferings = isOfferingsCatalog ? core.deriveCourseOfferings(tableModels) : [];
+        announce("Materias escaneadas eliminadas");
+        renderView();
+      } catch (error) {
+        clearScanButton.disabled = false;
+        scanStatus.textContent = `No pudimos limpiar las materias escaneadas. ${error?.message || "Vuelve a intentarlo."}`;
+        scanStatus.dataset.state = "error";
+        announce(scanStatus.textContent);
+      }
+    });
     stopButton.addEventListener("click", () => scanController?.abort());
 
     if (!courseOfferings.length) {
-      view.append(makeEmpty("Aún no hay grupos para planear", "Selecciona tu carrera en SAES y pulsa “Escanear periodos y turnos”."));
+      view.append(makeEmpty("Aún no hay grupos para planear", `Selecciona tu carrera en SAES y pulsa “${scanButtonLabel()}”.`));
       return;
     }
 
@@ -914,7 +1025,7 @@
     browserHeader.className = "ms-browser-header";
     const browserTitle = document.createElement("h3");
     browserTitle.className = "ms-section__title";
-    browserTitle.textContent = "Oferta disponible";
+    browserTitle.textContent = "Materias disponibles";
     const search = document.createElement("input");
     search.className = "ms-input";
     search.type = "search";
@@ -970,7 +1081,7 @@
     semesterFilter.hidden = !detectedPeriods.length;
     const filterBar = document.createElement("details");
     filterBar.className = "ms-filter-disclosure";
-    filterBar.setAttribute("aria-label", "Filtros de oferta");
+    filterBar.setAttribute("aria-label", "Filtros de materias");
     let compatibleOnly = false;
     let availableOnly = false;
     const filterSummary = document.createElement("summary");
@@ -1014,12 +1125,18 @@
     const selectionCount = document.createElement("span");
     selectionCount.className = "ms-count";
     planHeader.append(planTitle, selectionCount);
+    const planStatus = document.createElement("section");
+    planStatus.className = "ms-plan-status";
+    planStatus.setAttribute("role", "status");
+    planStatus.setAttribute("aria-live", "polite");
+    planStatus.setAttribute("aria-atomic", "true");
+    planStatus.tabIndex = -1;
     const selectionSummary = document.createElement("div");
     selectionSummary.className = "ms-selection-summary";
     const generate = document.createElement("button");
     generate.type = "button";
     generate.className = "ms-button ms-button--primary";
-    generate.textContent = "Generar propuestas";
+    generate.textContent = "Generar horarios";
     const clear = document.createElement("button");
     clear.type = "button";
     clear.className = "ms-button";
@@ -1027,14 +1144,57 @@
     const actions = document.createElement("div");
     actions.className = "ms-row ms-plan-actions";
     actions.append(generate, clear);
+    const generateHelp = document.createElement("p");
+    generateHelp.id = "ms-generate-help";
+    generateHelp.className = "ms-helper ms-generate-help";
+    generate.setAttribute("aria-describedby", generateHelp.id);
     const proposals = document.createElement("div");
     proposals.className = "ms-proposals";
-    plan.append(planHeader, selectionSummary, actions);
+    plan.append(planHeader, planStatus, selectionSummary, actions, generateHelp);
     workspace.append(browser, plan, proposals);
     view.append(workspace);
 
+    let generationError = "";
+    let plannerStorageError = "";
+
     function selectedOfferings() {
       return courseOfferings.filter((offering) => plannerSelection.has(offering.id));
+    }
+
+    async function persistPlannerSelection() {
+      plannerStorageError = "";
+      try {
+        await storage.set({ [plannerKey]: [...plannerSelection] });
+        return true;
+      } catch {
+        plannerStorageError = "No pudimos guardar tu selección en Chrome. Puedes seguir comparando, pero se perderá al cerrar esta pestaña.";
+        announce("No fue posible guardar la selección del horario");
+        return false;
+      }
+    }
+
+    async function removeCandidate(offering) {
+      plannerSelection.delete(offering.id);
+      generatedSchedules = [];
+      generationError = "";
+      await persistPlannerSelection();
+      renderOptions();
+      updatePlan();
+      announce(`${offering.subject}, grupo ${offering.group}, quitado`);
+    }
+
+    function updateWorkflow(diagnostics) {
+      const hasOfferings = courseOfferings.length > 0;
+      const hasSelection = selectedOfferings().length > 0;
+      workflowSteps[0].dataset.state = hasOfferings ? "complete" : "active";
+      workflowSteps[1].dataset.state = hasSelection ? "complete" : hasOfferings ? "active" : "pending";
+      workflowSteps[2].dataset.state = generatedSchedules.length
+        ? "complete"
+        : generationError || diagnostics.state === "blocked" || diagnostics.state === "conflict"
+        ? "error"
+        : hasSelection
+        ? "active"
+        : "pending";
     }
 
     function availableAlternatives(fullOffering, selected) {
@@ -1166,8 +1326,9 @@
           if (checkbox.checked) plannerSelection.add(offering.id);
           else plannerSelection.delete(offering.id);
           generatedSchedules = [];
+          generationError = "";
           activeGeneratedSchedule = 0;
-          await storage.set({ [plannerKey]: [...plannerSelection] });
+          await persistPlannerSelection();
           renderOptions();
           updatePlan();
         });
@@ -1207,14 +1368,14 @@
       const proposalHeader = document.createElement("div");
       proposalHeader.className = "ms-proposal-header";
       const title = document.createElement("strong");
-      title.textContent = `${generatedSchedules.length} propuesta${generatedSchedules.length === 1 ? "" : "s"} sin empalmes`;
+      title.textContent = core.generatedScheduleCopy(generatedSchedules.length).title;
       const picker = document.createElement("select");
       picker.className = "ms-select ms-proposal-picker";
-      picker.setAttribute("aria-label", "Elegir propuesta de horario");
+      picker.setAttribute("aria-label", "Elegir horario generado");
       generatedSchedules.forEach((_schedule, index) => {
         const option = document.createElement("option");
         option.value = String(index);
-        option.textContent = `Propuesta ${index + 1}`;
+        option.textContent = core.generatedScheduleCopy(generatedSchedules.length, index).option;
         picker.append(option);
       });
       picker.value = String(activeGeneratedSchedule);
@@ -1227,45 +1388,6 @@
         const selected = generatedSchedules[activeGeneratedSchedule];
         preview.replaceChildren();
         preview.append(buildCalendarGrid(selected.entries));
-        selected.offerings.forEach((offering) => {
-          const row = document.createElement("div");
-          row.className = "ms-proposal-row";
-          const name = document.createElement("strong");
-          name.textContent = offering.subject;
-          const meta = document.createElement("span");
-          meta.textContent = `${offering.group} · ${offering.teacher || "Profesor no indicado"}`;
-          row.append(name, meta);
-          preview.append(row);
-        });
-        const oldExport = proposals.querySelector(".ms-export-strip");
-        if (oldExport) oldExport.remove();
-        const oldPrepared = proposals.querySelector(".ms-prepared-actions");
-        if (oldPrepared) oldPrepared.remove();
-        const preparedActions = document.createElement("div");
-        preparedActions.className = "ms-prepared-actions";
-        const savePrepared = document.createElement("button");
-        savePrepared.type = "button";
-        savePrepared.className = "ms-button ms-button--primary";
-        savePrepared.textContent = "Guardar para reinscripción";
-        const preparedHelp = document.createElement("p");
-        preparedHelp.className = "ms-helper";
-        preparedHelp.textContent = "Guarda esta propuesta en Chrome. No inscribe materias ni envía información.";
-        savePrepared.addEventListener("click", async () => {
-          preparedSchedule = {
-            savedAt: new Date().toISOString(),
-            career: scanCatalog?.career || "",
-            offerings: selected.offerings,
-            entries: selected.entries
-          };
-          await storage.set({ [preparedKey]: preparedSchedule });
-          savePrepared.dataset.state = "success";
-          savePrepared.textContent = "Horario guardado ✓";
-          preparedHelp.textContent = "Listo para consultarlo cuando llegue tu cita. Aún no se ha enviado a SAES.";
-          announce("Horario preparado guardado localmente");
-        });
-        preparedActions.append(savePrepared, preparedHelp);
-        proposals.append(preparedActions);
-        renderCalendarExport(selected.entries, proposals, `propuesta-${activeGeneratedSchedule + 1}`);
       }
       picker.addEventListener("change", drawProposal);
       proposals.append(proposalHeader, preview);
@@ -1276,18 +1398,80 @@
       const selected = selectedOfferings();
       const fullSelected = occupancyEnabled ? selected.filter((offering) => occupancyFor(offering)?.available === 0) : [];
       const generation = generationCandidates(selected);
-      const directConflicts = core.findScheduleConflicts(selected.flatMap((offering) => offering.entries));
+      // Un solo diagnóstico alimenta el resumen, los pasos y las recuperaciones para evitar mensajes contradictorios.
+      const diagnostics = core.plannerDiagnostics(selected, { blockedSubjects: generation.blockedSubjects });
       selectionCount.textContent = `${selected.length} grupo${selected.length === 1 ? "" : "s"}`;
       generate.disabled = !selected.length || generation.blockedSubjects.length > 0;
-      generate.title = generation.blockedSubjects.length ? "Falta una alternativa con lugares para una o más materias." : "";
+      generate.removeAttribute("title");
       clear.disabled = !selected.length;
-      selectionSummary.replaceChildren();
-      if (!selected.length) {
-        selectionSummary.append(makeEmpty("Empieza con tus materias", "Marca todos los grupos que considerarías. Puedes incluir varias alternativas de la misma materia."));
+      planStatus.replaceChildren();
+      const statusCopy = document.createElement("div");
+      const statusTitle = document.createElement("strong");
+      const statusDetail = document.createElement("p");
+      statusDetail.className = "ms-helper";
+      if (plannerStorageError) {
+        planStatus.dataset.state = "error";
+        statusTitle.textContent = "Tu selección no quedó guardada";
+        statusDetail.textContent = plannerStorageError;
+      } else if (generationError) {
+        planStatus.dataset.state = "error";
+        statusTitle.textContent = "No encontramos un horario completo";
+        statusDetail.textContent = generationError;
       } else {
-        const summary = document.createElement("p");
-        summary.className = "ms-helper";
-        summary.textContent = directConflicts.length ? `${directConflicts.length} cruce${directConflicts.length === 1 ? "" : "s"} entre candidatos` : "Sin cruces entre candidatos";
+        planStatus.dataset.state = diagnostics.state;
+        statusTitle.textContent = diagnostics.title;
+        statusDetail.textContent = diagnostics.detail;
+      }
+      statusCopy.append(statusTitle, statusDetail);
+      const statusMark = document.createElement("span");
+      statusMark.className = "ms-plan-status__mark";
+      statusMark.setAttribute("aria-hidden", "true");
+      planStatus.append(statusMark, statusCopy);
+      generateHelp.textContent = generate.disabled
+        ? diagnostics.state === "blocked"
+          ? "Elige una alternativa con lugares para cada materia antes de generar."
+          : "Selecciona al menos un grupo candidato."
+        : diagnostics.state === "conflict"
+        ? "El generador probará tus alternativas para evitar los traslapes señalados."
+        : "Crearemos hasta 30 horarios sin empalmes para que elijas uno.";
+      if (plannerStorageError || generationError) generateHelp.dataset.state = "error";
+      else delete generateHelp.dataset.state;
+      updateWorkflow(diagnostics);
+      selectionSummary.replaceChildren();
+      selectionSummary.hidden = !selected.length;
+      if (selected.length) {
+        if (diagnostics.conflicts.length) {
+          const conflictIssues = document.createElement("ul");
+          conflictIssues.className = "ms-planner-issues";
+          diagnostics.conflicts.slice(0, 8).forEach((conflict) => {
+            const issue = document.createElement("li");
+            const issueCopy = document.createElement("div");
+            const issueTitle = document.createElement("strong");
+            issueTitle.textContent = formatConflictWindow(conflict);
+            const issueDetail = document.createElement("p");
+            issueDetail.className = "ms-helper";
+            const left = conflict.leftOffering;
+            const right = conflict.rightOffering;
+            issueDetail.textContent = left && right
+              ? `${left.subject} (${left.group}) coincide con ${right.subject} (${right.group}).`
+              : `${conflict.left.label} coincide con ${conflict.right.label}.`;
+            issueCopy.append(issueTitle, issueDetail);
+            const issueActions = document.createElement("div");
+            issueActions.className = "ms-planner-issue__actions";
+            [left, right].filter(Boolean).forEach((offering) => {
+              const removeIssue = document.createElement("button");
+              removeIssue.type = "button";
+              removeIssue.className = "ms-button ms-button--quiet";
+              removeIssue.textContent = `Quitar ${offering.group}`;
+              removeIssue.setAttribute("aria-label", `Resolver traslape quitando ${offering.subject}, grupo ${offering.group}`);
+              removeIssue.addEventListener("click", () => removeCandidate(offering));
+              issueActions.append(removeIssue);
+            });
+            issue.append(issueCopy, issueActions);
+            conflictIssues.append(issue);
+          });
+          selectionSummary.append(conflictIssues);
+        }
         const selectionList = document.createElement("div");
         selectionList.className = "ms-selection-list";
         const selectionHeader = document.createElement("div");
@@ -1322,18 +1506,11 @@
           remove.className = "ms-button ms-button--quiet ms-selection-item__remove";
           remove.textContent = "Quitar";
           remove.setAttribute("aria-label", `Quitar ${offering.subject}, grupo ${offering.group}`);
-          remove.addEventListener("click", async () => {
-            plannerSelection.delete(offering.id);
-            generatedSchedules = [];
-            await storage.set({ [plannerKey]: [...plannerSelection] });
-            renderOptions();
-            updatePlan();
-            announce(`${offering.subject}, grupo ${offering.group}, quitado`);
-          });
+          remove.addEventListener("click", () => removeCandidate(offering));
           row.append(copy, teacher, times, remove);
           selectionList.append(row);
         });
-        selectionSummary.append(summary, selectionList);
+        selectionSummary.append(selectionList);
         if (fullSelected.length) {
           const alerts = document.createElement("div");
           alerts.className = "ms-capacity-alerts";
@@ -1367,7 +1544,8 @@
                   plannerSelection.delete(offering.id);
                   plannerSelection.add(candidate.id);
                   generatedSchedules = [];
-                  await storage.set({ [plannerKey]: [...plannerSelection] });
+                  generationError = "";
+                  await persistPlannerSelection();
                   renderOptions();
                   updatePlan();
                   announce(`${offering.group} reemplazado por ${candidate.group}`);
@@ -1397,33 +1575,29 @@
       const generation = generationCandidates();
       if (generation.blockedSubjects.length) {
         announce("Falta una alternativa con lugares para una o más materias");
+        planStatus.focus({ preventScroll: true });
         return;
       }
+      generationError = "";
       generatedSchedules = core.generateScheduleCombinations(generation.offerings, 30);
       activeGeneratedSchedule = 0;
-      updatePlan();
       if (!generatedSchedules.length) {
-        const notice = document.createElement("div");
-        notice.className = "ms-notice ms-notice--error";
-        const copy = document.createElement("div");
-        const strong = document.createElement("strong");
-        strong.textContent = "No existe una combinación completa sin empalmes";
-        const detail = document.createElement("p");
-        detail.className = "ms-helper";
-        detail.textContent = "Agrega otra alternativa para alguna materia o quita un grupo candidato.";
-        copy.append(strong, detail);
-        notice.append(copy);
-        proposals.append(notice);
+        generationError = "Agrega otra alternativa para una de las materias señaladas o quita uno de los grupos que coinciden.";
+        updatePlan();
+        planStatus.focus({ preventScroll: true });
+        planStatus.scrollIntoView({ block: "nearest", behavior: "smooth" });
         announce("No existe una combinación completa sin empalmes");
         return;
       }
-      announce(`${generatedSchedules.length} propuestas sin empalmes generadas`);
+      updatePlan();
+      announce(`${generatedSchedules.length} horarios sin empalmes generados`);
       proposals.scrollIntoView({ block: "nearest", behavior: "smooth" });
     });
     clear.addEventListener("click", async () => {
       plannerSelection.clear();
       generatedSchedules = [];
-      await storage.set({ [plannerKey]: [] });
+      generationError = "";
+      await persistPlannerSelection();
       renderOptions();
       updatePlan();
       announce("Selección del planificador borrada");
@@ -1435,6 +1609,7 @@
       updateOccupancyStatus({ state, message });
       if (state !== "ready" && state !== "disabled") return;
       generatedSchedules = [];
+      generationError = "";
       activeGeneratedSchedule = 0;
       const searchValue = search.value;
       const listScroll = optionList.scrollTop;
@@ -1496,10 +1671,10 @@
   function renderScheduleShortcut() {
     const hasCatalog = Boolean(scanCatalog?.offerings?.length);
     const empty = makeEmpty(
-      hasCatalog ? "Tu oferta escaneada está lista" : "Abre Horarios de clase para comenzar",
+      hasCatalog ? "Tus materias escaneadas están listas" : "Abre Horarios de clase para comenzar",
       hasCatalog
-        ? `${scanCatalog.offerings.length} grupos guardados. Puedes seguir navegando por SAES y volver aquí cuando quieras actualizar o comparar tu oferta.`
-        : "Desde Horarios podrás escanear la oferta de tu carrera y armar una propuesta sin empalmes."
+        ? `${scanCatalog.offerings.length} grupos guardados. Puedes seguir navegando por SAES y volver aquí cuando quieras actualizar o comparar tus materias.`
+        : "Desde Horarios podrás escanear las materias de tu carrera y armar un horario sin empalmes."
     );
     const button = document.createElement("button");
     button.type = "button";
@@ -1516,7 +1691,7 @@
   function renderLoginRequired() {
     view.append(makeEmpty(
       "Inicia sesión para usar MI SAES",
-      "Cuando entres a SAES, vuelve a abrir el panel para consultar tus herramientas y tu oferta."
+      "Cuando entres a SAES, vuelve a abrir el panel para consultar tus herramientas y materias."
     ));
   }
 
@@ -1526,10 +1701,10 @@
     heading.textContent = "Tu horario preparado";
     const lede = document.createElement("p");
     lede.className = "ms-lede";
-    lede.textContent = "Consulta la propuesta que guardaste y captura sus grupos en SAES durante tu cita.";
+    lede.textContent = "Consulta el horario que guardaste y captura sus grupos en SAES durante tu cita.";
     view.append(heading, lede);
     if (!preparedSchedule) {
-      view.append(makeEmpty("No has guardado una propuesta", "Ve a Horarios de clase, escanea la oferta, genera una propuesta y pulsa “Guardar para reinscripción”."));
+      view.append(makeEmpty("No hay un horario guardado", "MI SAES no encontró un horario preparado anteriormente en este navegador."));
       return;
     }
     const notice = document.createElement("div");
@@ -1581,7 +1756,7 @@
 
   function renderSchedule() {
     if (context === "login") renderLoginRequired();
-    else if (isOfferingsCatalog) renderPlanner();
+    else if (core.shouldRenderSchedulePlanner({ authenticated: hasAuthenticatedSession, offeringsPage: isOfferingsCatalog, context })) renderPlanner();
     else if (isReenrollmentPage) renderPreparedForEnrollment();
     else renderScheduleShortcut();
   }
@@ -1642,7 +1817,6 @@
 
     renderTrajectoryHomeTool();
     renderStudentIdTool();
-    if (context === "evaluation" && settings.modules.evaluationAssist) renderEvaluationTool();
   }
 
   function renderTrajectoryHomeTool() {
@@ -1657,32 +1831,94 @@
     const strong = document.createElement("strong");
     strong.textContent = "Mostrar Mi trayectoria";
     const detail = document.createElement("small");
-    detail.textContent = "Añade un resumen local debajo del saludo en la página principal de alumnos.";
+    detail.textContent = "Siempre visible debajo del saludo en la página principal de alumnos.";
     copy.append(strong, detail);
     const input = document.createElement("input");
     input.type = "checkbox";
     input.role = "switch";
-    input.checked = settings.modules.trajectoryHome;
-    input.addEventListener("change", async () => {
-      const previous = settings;
-      settings = core.mergeSettings({
-        ...settings,
-        modules: { ...settings.modules, trajectoryHome: input.checked }
-      });
-      syncTrajectoryHome();
-      try {
-        await storage.set({ settings });
-        announce(input.checked ? "Mi trayectoria visible en Inicio" : "Mi trayectoria oculta de Inicio");
-      } catch {
-        settings = previous;
-        input.checked = settings.modules.trajectoryHome;
-        syncTrajectoryHome();
-        announce("No fue posible guardar la preferencia");
-      }
-    });
+    input.checked = true;
+    input.disabled = true;
     control.append(copy, input);
     section.append(title, control);
     view.append(section);
+  }
+
+  function markStudentHomeClutter(anchor) {
+    anchor.dataset.misaesHomeSource = "true";
+    [...anchor.parentElement.querySelectorAll("img")].forEach((image) => {
+      let path = "";
+      try {
+        path = new URL(image.currentSrc || image.src, location.href).pathname;
+      } catch {
+        return;
+      }
+      if (!/(aviso_seg_2014|sliderDenuncia)/i.test(path)) return;
+      // Los avisos ilustrados ocupan casi toda la portada y duplican accesos ya disponibles.
+      // Marcamos sólo su contenedor para poder restaurarlo al desactivar la extensión.
+      (image.closest("center") || image).dataset.misaesHomeClutter = "true";
+    });
+  }
+
+  async function loadOfficialStudentPhoto() {
+    studentPhotoController?.abort();
+    const targetUrl = core.studentPhotoPageUrl(location.origin);
+    if (!targetUrl) return;
+    studentPhotoController = new AbortController();
+    const target = new URL(targetUrl);
+    try {
+      // La foto se descubre en Datos Personales y se muestra desde su URL oficial.
+      // No se guarda una copia ni se envía fuera del dominio del plantel.
+      const response = await fetch(target, {
+        credentials: "same-origin",
+        cache: "no-store",
+        signal: studentPhotoController.signal
+      });
+      if (!response.ok) return;
+      if (!core.isSameOriginUrl(response.url, location.origin)) return;
+      const documentCopy = new DOMParser().parseFromString(await response.text(), "text/html");
+      const photoUrl = studentHome.officialPhotoFromDocument(documentCopy, target.href, core);
+      if (photoUrl && studentHomeHost?.isConnected) studentHomeView?.setPhoto(photoUrl);
+    } catch (error) {
+      if (error?.name !== "AbortError") return;
+    } finally {
+      studentPhotoController = null;
+    }
+  }
+
+  function unmountStudentHome() {
+    studentPhotoController?.abort();
+    studentPhotoController = null;
+    studentHomeHost?.remove();
+    studentHomeHost = null;
+    studentHomeView = null;
+    document.querySelectorAll("[data-misaes-home-source]").forEach((element) => delete element.dataset.misaesHomeSource);
+    document.querySelectorAll("[data-misaes-home-clutter]").forEach((element) => delete element.dataset.misaesHomeClutter);
+  }
+
+  function syncStudentHome() {
+    const shouldShow = core.shouldEnhanceStudentHome({
+      url: location.href,
+      enabled: settings.enabled,
+      authenticated: hasAuthenticatedSession
+    });
+    if (!shouldShow) {
+      unmountStudentHome();
+      return;
+    }
+    if (studentHomeHost?.isConnected) return;
+
+    const anchor = document.getElementById("ctl00_mainCopy_FormView1");
+    if (!anchor?.parentElement) return;
+    const identity = core.studentGreetingModel([...anchor.querySelectorAll("tr")].map((row) => row.textContent));
+    studentHomeView = studentHome.create({
+      document,
+      stylesheetUrl: chrome.runtime.getURL("src/content/student-home.css"),
+      identity
+    });
+    studentHomeHost = studentHomeView.host;
+    markStudentHomeClutter(anchor);
+    anchor.insertAdjacentElement("afterend", studentHomeHost);
+    void loadOfficialStudentPhoto();
   }
 
   const trajectoryPaths = Object.freeze({
@@ -1771,7 +2007,9 @@
       return;
     }
 
-    const anchor = document.getElementById("ctl00_mainCopy_FormView1");
+    const anchor = studentHomeHost?.isConnected
+      ? studentHomeHost
+      : document.getElementById("ctl00_mainCopy_FormView1");
     if (!anchor?.parentElement) return;
     trajectoryHomeHost = document.createElement("section");
     trajectoryHomeHost.id = "misaes-trajectory-home";
@@ -1878,117 +2116,6 @@
     view.append(section);
   }
 
-  function evaluationControls() {
-    const radioGroups = new Map();
-    [...document.querySelectorAll('input[type="radio"][name]')]
-      .filter((input) => !host.contains(input) && !input.disabled)
-      .forEach((input) => {
-        if (!radioGroups.has(input.name)) radioGroups.set(input.name, []);
-        radioGroups.get(input.name).push(input);
-      });
-    const groups = [...radioGroups.values()].filter((group) => group.length >= 2);
-    const selects = [...document.querySelectorAll("select")]
-      .filter((select) => !host.contains(select) && !select.disabled && select.options.length >= 3);
-    return { groups, selects };
-  }
-
-  function renderEvaluationTool() {
-    const { groups, selects } = evaluationControls();
-    const section = document.createElement("section");
-    section.className = "ms-section";
-    const title = document.createElement("h3");
-    title.className = "ms-section__title";
-    title.textContent = "Asistente de evaluación";
-    const notice = document.createElement("div");
-    notice.className = "ms-notice";
-    notice.innerHTML = `<svg class="ms-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v4M12 16h.01M4 4h16v16H4z"/></svg>`;
-    const copy = document.createElement("div");
-    const strong = document.createElement("strong");
-    strong.textContent = `${groups.length + selects.length} preguntas detectadas`;
-    const detail = document.createElement("p");
-    detail.className = "ms-helper";
-    detail.textContent = "Verifica si la escala va de menor a mayor. MI SAES nunca pulsa Enviar.";
-    copy.append(strong, detail);
-    notice.append(copy);
-
-    const field = document.createElement("label");
-    field.className = "ms-field";
-    const label = document.createElement("span");
-    label.className = "ms-label";
-    label.textContent = "Posición de respuesta";
-    const select = document.createElement("select");
-    select.className = "ms-select";
-    select.innerHTML = `
-      <option value="first">Primera opción</option>
-      <option value="middle" selected>Opción intermedia</option>
-      <option value="last">Última opción</option>
-    `;
-    const helper = document.createElement("span");
-    helper.className = "ms-helper";
-    helper.textContent = "La extensión no interpreta si una opción es positiva o negativa.";
-    field.append(label, select, helper);
-
-    const actions = document.createElement("div");
-    actions.className = "ms-row";
-    const apply = document.createElement("button");
-    apply.type = "button";
-    apply.className = "ms-button ms-button--primary";
-    apply.textContent = "Aplicar para revisar";
-    const undo = document.createElement("button");
-    undo.type = "button";
-    undo.className = "ms-button";
-    undo.textContent = "Deshacer";
-    undo.disabled = true;
-
-    apply.addEventListener("click", () => {
-      evaluationUndo = [];
-      const chooseIndex = (length) => {
-        if (select.value === "first") return 0;
-        if (select.value === "last") return length - 1;
-        return Math.floor((length - 1) / 2);
-      };
-      groups.forEach((group) => {
-        group.forEach((radio) => evaluationUndo.push({ element: radio, checked: radio.checked }));
-        const chosen = group[chooseIndex(group.length)];
-        chosen.click();
-      });
-      selects.forEach((pageSelect) => {
-        evaluationUndo.push({ element: pageSelect, value: pageSelect.value });
-        const options = [...pageSelect.options].filter((option) => !option.disabled && option.value !== "");
-        if (!options.length) return;
-        pageSelect.value = options[chooseIndex(options.length)].value;
-        pageSelect.dispatchEvent(new Event("change", { bubbles: true }));
-      });
-      apply.dataset.state = "success";
-      apply.textContent = "Aplicado para revisar ✓";
-      undo.disabled = false;
-      helper.textContent = "Revisa cada respuesta en SAES antes de enviar el formulario.";
-      announce("Respuestas aplicadas. Revisa antes de enviar.");
-      setTimeout(() => {
-        delete apply.dataset.state;
-        apply.textContent = "Aplicar para revisar";
-      }, 2500);
-    });
-
-    undo.addEventListener("click", () => {
-      evaluationUndo.forEach((snapshot) => {
-        if ("checked" in snapshot) snapshot.element.checked = snapshot.checked;
-        if ("value" in snapshot) {
-          snapshot.element.value = snapshot.value;
-          snapshot.element.dispatchEvent(new Event("change", { bubbles: true }));
-        }
-      });
-      evaluationUndo = [];
-      undo.disabled = true;
-      helper.textContent = "Cambios deshechos.";
-      announce("Cambios de evaluación deshechos");
-    });
-
-    actions.append(apply, undo);
-    section.append(title, notice, field, actions);
-    view.append(section);
-  }
-
   function renderView() {
     refreshOccupancyView = null;
     view.replaceChildren();
@@ -2014,8 +2141,13 @@
   }
 
   launcher.addEventListener("click", () => setOpen(!isOpen));
-  backdrop.addEventListener("click", () => setOpen(false));
-  shadow.querySelector('[data-action="close"]').addEventListener("click", () => setOpen(false));
+  shadow.querySelector('[data-action="show-saes"]').addEventListener("click", () => setOpen(false));
+  shadow.querySelector('[data-action="dismiss-release"]').addEventListener("click", async () => {
+    releaseNotice = null;
+    renderReleaseBanner();
+    await storage.remove([releaseNoticeKey]);
+    announce("Novedades cerradas");
+  });
 
   panel.addEventListener("keydown", (event) => {
     if (event.key !== "Tab") return;
@@ -2074,11 +2206,15 @@
 
   collectTables();
   applySettings();
-  if (occupancyEnabled && (isOfferingsCatalog || isReenrollmentPage)) scheduleOccupancyRefresh(1000);
+  if (occupancyEnabled && scanCatalog?.offerings?.length
+    && core.shouldRenderSchedulePlanner({ authenticated: hasAuthenticatedSession, offeringsPage: isOfferingsCatalog, context })) {
+    scheduleOccupancyRefresh(1000);
+  }
   window.addEventListener("pagehide", () => {
     clearTimeout(occupancyTimer);
     occupancyController?.abort();
     trajectoryController?.abort();
+    unmountStudentHome();
     unmountTrajectoryHome();
   }, { once: true });
 })();

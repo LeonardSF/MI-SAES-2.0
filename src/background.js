@@ -1,28 +1,38 @@
 "use strict";
 
+importScripts("shared/core.js");
+
 const DEFAULT_SETTINGS = {
   enabled: true,
   hideStudentId: false,
   modules: {
     filters: true,
     schedule: true,
-    evaluationAssist: true,
+    trajectoryHome: true,
     notes: true,
     tools: true
   }
 };
 
-chrome.runtime.onInstalled.addListener(async () => {
+chrome.runtime.onInstalled.addListener(async (details) => {
   const current = await chrome.storage.local.get(["settings"]);
+  const savedModules = current.settings?.modules || {};
   const settings = {
     enabled: current.settings?.enabled !== false,
     hideStudentId: current.settings?.hideStudentId === true,
-    modules: {
-      ...DEFAULT_SETTINGS.modules,
-      ...(current.settings?.modules || {})
-    }
+    modules: Object.fromEntries(
+      Object.entries(DEFAULT_SETTINGS.modules).map(([module, enabled]) => [
+        module,
+        module === "trajectoryHome" ? true : module in savedModules ? savedModules[module] : enabled
+      ])
+    )
   };
-  await chrome.storage.local.set({ settings });
+  const releaseNotice = globalThis.MISaesCore.releaseNoticeForInstall({
+    reason: details?.reason,
+    previousVersion: details?.previousVersion,
+    currentVersion: chrome.runtime.getManifest().version
+  });
+  await chrome.storage.local.set(releaseNotice ? { settings, releaseNotice } : { settings });
 });
 
 chrome.commands.onCommand.addListener(async (command) => {
