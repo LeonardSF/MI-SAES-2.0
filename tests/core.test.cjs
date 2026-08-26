@@ -220,6 +220,120 @@ test("genera combinaciones sin empalmes eligiendo una opción por materia", () =
   assert.ok(combinations.every((item) => item.offerings.length === 2));
 });
 
+test("calcula las métricas reales de un horario sin contar huecos como clase", () => {
+  assert.deepEqual(core.scheduleMetrics([
+    { day: "Lunes", start: 480, end: 570 },
+    { day: "Lunes", start: 660, end: 720 },
+    { day: "Miércoles", start: 600, end: 660 }
+  ]), {
+    attendanceDays: 2,
+    classMinutes: 210,
+    idleMinutes: 90,
+    earliestStart: 480,
+    latestEnd: 720,
+    longestDaySpan: 240
+  });
+
+  assert.deepEqual(core.scheduleMetrics([]), {
+    attendanceDays: 0,
+    classMinutes: 0,
+    idleMinutes: 0,
+    earliestStart: null,
+    latestEnd: null,
+    longestDaySpan: 0
+  });
+});
+
+test("ordena horarios con criterios explícitos y conserva los empates", () => {
+  const schedules = [
+    {
+      id: "dos-dias-tarde",
+      entries: [
+        { day: "Lunes", start: 600, end: 690 },
+        { day: "Martes", start: 600, end: 690 }
+      ]
+    },
+    {
+      id: "un-dia-con-hueco",
+      entries: [
+        { day: "Lunes", start: 480, end: 540 },
+        { day: "Lunes", start: 600, end: 660 }
+      ]
+    },
+    {
+      id: "un-dia-continuo",
+      entries: [
+        { day: "Lunes", start: 420, end: 600 }
+      ]
+    }
+  ];
+
+  assert.deepEqual(core.sortScheduleCombinations(schedules, "balanced").map((item) => item.id), [
+    "un-dia-continuo", "un-dia-con-hueco", "dos-dias-tarde"
+  ]);
+  assert.deepEqual(core.sortScheduleCombinations(schedules, "days").map((item) => item.id), [
+    "un-dia-continuo", "un-dia-con-hueco", "dos-dias-tarde"
+  ]);
+  assert.deepEqual(core.sortScheduleCombinations(schedules, "gaps").map((item) => item.id), [
+    "un-dia-continuo", "dos-dias-tarde", "un-dia-con-hueco"
+  ]);
+  assert.deepEqual(core.sortScheduleCombinations(schedules, "late-start").map((item) => item.id), [
+    "dos-dias-tarde", "un-dia-con-hueco", "un-dia-continuo"
+  ]);
+  assert.deepEqual(core.sortScheduleCombinations(schedules, "early-end").map((item) => item.id), [
+    "un-dia-continuo", "un-dia-con-hueco", "dos-dias-tarde"
+  ]);
+
+  const tied = core.sortScheduleCombinations([
+    { id: "primero", entries: [{ day: "Lunes", start: 480, end: 540 }] },
+    { id: "segundo", entries: [{ day: "Lunes", start: 480, end: 540 }] }
+  ], "balanced");
+  assert.deepEqual(tied.map((item) => item.id), ["primero", "segundo"]);
+  assert.ok(tied.every((item) => item.metrics?.attendanceDays === 1));
+});
+
+test("agrupa la oferta por materia y distingue grupos aceptados", () => {
+  const offerings = [
+    { id: "calculo-a", subject: "Cálculo", group: "1A" },
+    { id: "calculo-b", subject: "CÁLCULO", group: "1B" },
+    { id: "fisica-a", subject: "Física", group: "2A" }
+  ];
+
+  assert.deepEqual(core.plannerSubjectGroups(offerings, new Set(["calculo-a"])), [
+    {
+      key: "calculo",
+      subject: "Cálculo",
+      selected: true,
+      acceptedCount: 1,
+      offerings: offerings.slice(0, 2)
+    },
+    {
+      key: "fisica",
+      subject: "Física",
+      selected: false,
+      acceptedCount: 0,
+      offerings: offerings.slice(2)
+    }
+  ]);
+});
+
+test("seleccionar una materia acepta todos sus grupos y desmarcarla los quita", () => {
+  const offerings = [
+    { id: "calculo-a", subject: "Cálculo", group: "1A" },
+    { id: "calculo-b", subject: "Cálculo", group: "1B" },
+    { id: "fisica-a", subject: "Física", group: "2A" }
+  ];
+
+  assert.deepEqual(
+    [...core.setPlannerSubjectSelected(offerings, new Set(["fisica-a"]), "CÁLCULO", true)],
+    ["fisica-a", "calculo-a", "calculo-b"]
+  );
+  assert.deepEqual(
+    [...core.setPlannerSubjectSelected(offerings, new Set(["fisica-a", "calculo-a"]), "calculo", false)],
+    ["fisica-a"]
+  );
+});
+
 test("resume los problemas del planificador con una recuperación concreta", () => {
   const control = {
     id: "control",
@@ -236,8 +350,8 @@ test("resume los problemas del planificador con una recuperación concreta", () 
 
   assert.deepEqual(core.plannerDiagnostics([]), {
     state: "empty",
-    title: "Selecciona tus grupos candidatos",
-    detail: "Marca al menos un grupo para continuar.",
+    title: "Selecciona las materias que quieres cursar",
+    detail: "Al elegir una materia aceptaremos inicialmente todos sus grupos.",
     conflicts: [],
     blockedSubjects: []
   });
@@ -255,6 +369,26 @@ test("resume los problemas del planificador con una recuperación concreta", () 
   const ready = core.plannerDiagnostics([control]);
   assert.equal(ready.state, "ready");
   assert.equal(ready.title, "Selección lista para generar");
+});
+
+test("no trata como conflicto dos grupos alternativos de la misma materia", () => {
+  const alternatives = [
+    {
+      id: "calculo-a",
+      subject: "Cálculo",
+      group: "1A",
+      entries: [{ day: "Lunes", start: 480, end: 570, label: "Cálculo · 1A" }]
+    },
+    {
+      id: "calculo-b",
+      subject: "CÁLCULO",
+      group: "1B",
+      entries: [{ day: "Lunes", start: 480, end: 570, label: "Cálculo · 1B" }]
+    }
+  ];
+
+  assert.equal(core.plannerDiagnostics(alternatives).state, "ready");
+  assert.equal(core.plannerDiagnostics(alternatives).conflicts.length, 0);
 });
 
 test("exporta un horario semanal compatible con calendarios", () => {

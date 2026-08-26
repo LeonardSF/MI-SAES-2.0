@@ -461,12 +461,114 @@
     return combinations;
   }
 
+  function plannerSubjectGroups(offerings = [], selectedIds = new Set()) {
+    const selected = selectedIds instanceof Set ? selectedIds : new Set(selectedIds || []);
+    const groups = new Map();
+    offerings.forEach((offering) => {
+      const key = normalizeText(offering.subject);
+      if (!key) return;
+      if (!groups.has(key)) groups.set(key, { key, subject: offering.subject, selected: false, acceptedCount: 0, offerings: [] });
+      const group = groups.get(key);
+      group.offerings.push(offering);
+      if (selected.has(offering.id)) group.acceptedCount += 1;
+      group.selected = group.acceptedCount > 0;
+    });
+    return [...groups.values()];
+  }
+
+  function setPlannerSubjectSelected(offerings = [], selectedIds = new Set(), subject = "", enabled = true) {
+    const selected = new Set(selectedIds || []);
+    const key = normalizeText(subject);
+    offerings.forEach((offering) => {
+      if (normalizeText(offering.subject) !== key) return;
+      if (enabled) selected.add(offering.id);
+      else selected.delete(offering.id);
+    });
+    return selected;
+  }
+
+  function scheduleMetrics(entries = []) {
+    const days = new Map();
+    entries.forEach((entry) => {
+      const day = String(entry?.day || "").trim();
+      const start = Number(entry?.start);
+      const end = Number(entry?.end);
+      if (!day || !Number.isFinite(start) || !Number.isFinite(end) || end <= start) return;
+      if (!days.has(day)) days.set(day, []);
+      days.get(day).push({ start, end });
+    });
+
+    let classMinutes = 0;
+    let idleMinutes = 0;
+    let earliestStart = null;
+    let latestEnd = null;
+    let longestDaySpan = 0;
+    days.forEach((periods) => {
+      periods.sort((left, right) => left.start - right.start || left.end - right.end);
+      classMinutes += periods.reduce((total, period) => total + period.end - period.start, 0);
+      const dayStart = periods[0].start;
+      let previousEnd = periods[0].end;
+      periods.slice(1).forEach((period) => {
+        idleMinutes += Math.max(0, period.start - previousEnd);
+        previousEnd = Math.max(previousEnd, period.end);
+      });
+      const dayEnd = Math.max(...periods.map((period) => period.end));
+      earliestStart = earliestStart === null ? dayStart : Math.min(earliestStart, dayStart);
+      latestEnd = latestEnd === null ? dayEnd : Math.max(latestEnd, dayEnd);
+      longestDaySpan = Math.max(longestDaySpan, dayEnd - dayStart);
+    });
+
+    return {
+      attendanceDays: days.size,
+      classMinutes,
+      idleMinutes,
+      earliestStart,
+      latestEnd,
+      longestDaySpan
+    };
+  }
+
+  function sortScheduleCombinations(schedules = [], criterion = "balanced") {
+    const enriched = schedules.map((schedule, index) => ({
+      ...schedule,
+      metrics: scheduleMetrics(schedule.entries),
+      __originalIndex: Number.isInteger(schedule.generationIndex) ? schedule.generationIndex : index
+    }));
+    const sortKeys = {
+      balanced(metrics) {
+        return [metrics.attendanceDays, metrics.idleMinutes, -(metrics.earliestStart ?? -Infinity), metrics.latestEnd ?? Infinity, metrics.longestDaySpan];
+      },
+      days(metrics) {
+        return [metrics.attendanceDays, metrics.idleMinutes, -(metrics.earliestStart ?? -Infinity), metrics.latestEnd ?? Infinity];
+      },
+      gaps(metrics) {
+        return [metrics.idleMinutes, metrics.attendanceDays, -(metrics.earliestStart ?? -Infinity), metrics.latestEnd ?? Infinity];
+      },
+      "late-start"(metrics) {
+        return [-(metrics.earliestStart ?? -Infinity), metrics.attendanceDays, metrics.idleMinutes, metrics.latestEnd ?? Infinity];
+      },
+      "early-end"(metrics) {
+        return [metrics.latestEnd ?? Infinity, metrics.attendanceDays, metrics.idleMinutes, -(metrics.earliestStart ?? -Infinity)];
+      }
+    };
+    const keyFor = sortKeys[criterion] || sortKeys.balanced;
+    enriched.sort((left, right) => {
+      const leftKeys = keyFor(left.metrics);
+      const rightKeys = keyFor(right.metrics);
+      for (let index = 0; index < Math.max(leftKeys.length, rightKeys.length); index += 1) {
+        if (leftKeys[index] !== rightKeys[index]) return leftKeys[index] - rightKeys[index];
+      }
+      return left.__originalIndex - right.__originalIndex;
+    });
+    return enriched.map(({ __originalIndex, ...schedule }) => schedule);
+  }
+
   function plannerDiagnostics(selected = [], { blockedSubjects = [] } = {}) {
     if (!selected.length) {
       return {
         state: "empty",
-        title: "Selecciona tus grupos candidatos",
-        detail: "Marca al menos un grupo para continuar.",
+        title: "Selecciona las materias que quieres cursar",
+        detail: "Al elegir una materia aceptaremos inicialmente todos sus grupos.",
         conflicts: [],
         blockedSubjects: []
       };
@@ -478,7 +580,9 @@
         ...conflict,
         leftOffering: selected.find((offering) => (offering.entries || []).includes(conflict.left)) || null,
         rightOffering: selected.find((offering) => (offering.entries || []).includes(conflict.right)) || null
-      }));
+      }))
+      .filter((conflict) => !conflict.leftOffering || !conflict.rightOffering
+        || normalizeText(conflict.leftOffering.subject) !== normalizeText(conflict.rightOffering.subject));
 
     if (blocked.length) {
       return {
@@ -656,6 +760,10 @@
     deriveScheduleEntries,
     deriveCourseOfferings,
     generateScheduleCombinations,
+    plannerSubjectGroups,
+    setPlannerSubjectSelected,
+    scheduleMetrics,
+    sortScheduleCombinations,
     plannerDiagnostics,
     findScheduleConflicts,
     scheduleToIcs,

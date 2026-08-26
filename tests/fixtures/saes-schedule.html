@@ -54,6 +54,11 @@
                         <tr><td>6CM14</td><td>ARQUITECTURA DE COMPUTADORAS</td><td>PERSONA DOCENTE CUATRO</td><td>X</td><td>X</td><td>08:30-10:00</td><td>08:30-10:00</td><td></td><td>11:30-13:00</td><td></td><td></td></tr>
                         <tr><td>6CM15</td><td>INGENIERÍA DE SOFTWARE</td><td>PERSONA DOCENTE CINCO</td><td>X</td><td>X</td><td>07:00-08:30</td><td></td><td>11:30-13:00</td><td></td><td>07:00-08:30</td><td></td></tr>
                         <tr><td>6CM16</td><td>METODOLOGÍA DE LA INVESTIGACIÓN</td><td>PERSONA DOCENTE SEIS</td><td>X</td><td>X</td><td>11:30-13:00</td><td></td><td></td><td>07:00-08:30</td><td></td><td></td></tr>
+                        <tr><td>7CM11</td><td>TEORÍA DE LA INFORMACIÓN Y CODIFICACIÓN</td><td>PERSONA DOCENTE SIETE</td><td>X</td><td>X</td><td>13:00-14:30</td><td></td><td>13:00-14:30</td><td></td><td></td><td></td></tr>
+                        <tr><td>7CM12</td><td>TEORÍA DE CONTROL DIGITAL</td><td>PERSONA DOCENTE OCHO</td><td>X</td><td>X</td><td></td><td>14:30-16:00</td><td></td><td>14:30-16:00</td><td></td><td></td></tr>
+                        <tr><td>7CM13</td><td>BASES DE DATOS</td><td>PERSONA DOCENTE NUEVE</td><td>X</td><td>X</td><td>16:00-17:30</td><td></td><td>16:00-17:30</td><td></td><td></td><td></td></tr>
+                        <tr><td>7CM14</td><td>NUEVAS TECNOLOGÍAS EN LA TRANSFERENCIA DE INFORMACIÓN</td><td>PERSONA DOCENTE DIEZ</td><td>X</td><td>X</td><td></td><td>17:30-19:00</td><td></td><td></td><td>17:30-19:00</td><td></td></tr>
+                        <tr><td>7CM15</td><td>ADMINISTRACIÓN DE LA INGENIERÍA</td><td>PERSONA DOCENTE ONCE</td><td>X</td><td>X</td><td>19:00-20:30</td><td></td><td></td><td>19:00-20:30</td><td></td><td></td></tr>
                         <tr><td data-group="6CM21">6CM21</td><td>MODULACIÓN DIGITAL</td><td data-teacher="PERSONA DOCENTE UNO">PERSONA DOCENTE UNO</td><td>X</td><td>X</td><td>08:30-10:00</td><td>08:30-10:00</td><td>10:00-11:30</td><td>11:30-13:00</td><td></td><td></td></tr>
                       </tbody>
                     </table>
@@ -69,6 +74,24 @@
         </div>
       </div>
     </form>
+    <script>
+      if (new URLSearchParams(location.search).has("png-preview")) {
+        window.__pngExport = { type: "", filename: "" };
+        const originalCreateObjectURL = URL.createObjectURL.bind(URL);
+        URL.createObjectURL = (blob) => {
+          if (blob?.type === "image/png") window.__pngExport.type = blob.type;
+          return originalCreateObjectURL(blob);
+        };
+        const originalAnchorClick = HTMLAnchorElement.prototype.click;
+        HTMLAnchorElement.prototype.click = function click() {
+          if (this.download?.endsWith(".png")) {
+            window.__pngExport.filename = this.download;
+            return;
+          }
+          return originalAnchorClick.call(this);
+        };
+      }
+    </script>
     <script src="/tests/fixtures/chrome-mock.js"></script>
     <script src="/src/shared/core.js"></script>
     <script src="/src/content/scanner.js"></script>
@@ -77,5 +100,75 @@
     <script src="/src/content/trajectory-view.js"></script>
     <script src="/src/content/student-home.js"></script>
     <script src="/src/content/content.js"></script>
+    <output id="metrics-result"></output>
+    <script>
+      if (new URLSearchParams(location.search).has("metrics-preview")) {
+        setTimeout(async () => {
+          const root = document.getElementById("misaes-root")?.shadowRoot;
+          root?.querySelector(".ms-launcher")?.click();
+          await new Promise((resolve) => setTimeout(resolve, 200));
+          for (const label of [
+            "Seleccionar materia MODULACIÓN DIGITAL",
+            "Seleccionar materia ARQUITECTURA DE COMPUTADORAS",
+            "Seleccionar materia INGENIERÍA DE SOFTWARE"
+          ]) {
+            const checkbox = root?.querySelector(`input[aria-label="${label}"]`);
+            if (!checkbox) continue;
+            checkbox.click();
+            await new Promise((resolve) => setTimeout(resolve, 50));
+          }
+          root?.querySelector(".ms-plan-actions .ms-button--primary")?.click();
+          await new Promise((resolve) => setTimeout(resolve, 100));
+          const calendarEventsBeforeOccupancy = root?.querySelectorAll(".ms-proposal-preview [data-calendar-entry]").length || 0;
+          const occupancyToggle = root?.querySelector(".ms-occupancy-tools input[role='switch']");
+          occupancyToggle?.click();
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          const calendarEventsAfterOccupancy = root?.querySelectorAll(".ms-proposal-preview [data-calendar-entry]").length || 0;
+          const availabilityCheckbox = root?.querySelector("[data-calendar-availability]");
+          availabilityCheckbox?.click();
+          await new Promise((resolve) => setTimeout(resolve, 100));
+          const availabilityHeader = [...(root?.querySelectorAll(".ms-proposal-preview .ms-calendar-table thead th") || [])]
+            .some((header) => header.textContent === "Lugares");
+          const availabilityValues = [...(root?.querySelectorAll(".ms-proposal-preview .ms-calendar-table__availability") || [])]
+            .map((cell) => cell.textContent.trim());
+          if (new URLSearchParams(location.search).has("png-preview")) {
+            root?.querySelector("[data-download-schedule-png]")?.click();
+            await new Promise((resolve) => setTimeout(resolve, 500));
+          }
+          const sortButtons = [...(root?.querySelectorAll("[data-schedule-sort]") || [])];
+          const metrics = [...(root?.querySelectorAll(".ms-schedule-metric") || [])].map((item) => item.textContent.replace(/\s+/g, " ").trim());
+          const clippedSubjects = [...(root?.querySelectorAll(".ms-subject-option") || [])]
+            .filter((item) => item.scrollHeight > item.clientHeight + 1).length;
+          const actionBar = root?.querySelector(".ms-planner-actionbar");
+          const alternativeTrack = root?.querySelector(".ms-proposal-carousel__track");
+          document.getElementById("metrics-result").textContent = JSON.stringify({
+            prioritiesRemoved: sortButtons.length === 0 && !root?.querySelector(".ms-schedule-sort"),
+            carouselLabel: root?.querySelector(".ms-proposal-carousel__label")?.textContent || "",
+            metrics,
+            subjectCount: root?.querySelector(".ms-count")?.textContent || "",
+            acceptedGroups: root?.querySelectorAll("[aria-label^='Aceptar grupo']:checked")?.length || 0,
+            clippedSubjects,
+            actionBarOutsideColumns: actionBar?.parentElement?.classList.contains("ms-planner") === true
+              && !root?.querySelector(".ms-planner__plan .ms-plan-actions"),
+            alternativesAsCarousel: Boolean(alternativeTrack)
+              && alternativeTrack.scrollWidth >= alternativeTrack.clientWidth
+              && root?.querySelectorAll(".ms-proposal-card").length > 0
+              && root?.querySelectorAll("select.ms-proposal-picker").length === 0,
+            activeAlternative: root?.querySelectorAll(".ms-proposal-card[aria-pressed='true']").length,
+            compactCalendarTable: Boolean(root?.querySelector(".ms-proposal-preview .ms-calendar-table"))
+              && root?.querySelectorAll(".ms-proposal-preview .ms-calendar-table tbody tr").length > 0
+              && !root?.querySelector(".ms-proposal-preview .ms-calendar"),
+            calendarSignature: root?.querySelector(".ms-proposal-preview .ms-calendar-signature__copy")?.textContent.replace(/\s+/g, " ").trim() || "",
+            availabilityControl: Boolean(root?.querySelector("[data-calendar-availability]:checked"))
+              && availabilityHeader && availabilityValues.some((value) => /^\d+$/.test(value)),
+            pngExport: root?.querySelector(".ms-proposal-preview [data-download-schedule-png]")?.textContent || "",
+            pngGenerated: !new URLSearchParams(location.search).has("png-preview")
+              || (window.__pngExport?.type === "image/png" && /\.png$/.test(window.__pngExport?.filename || "")),
+            calendarPreservedOnOccupancy: calendarEventsBeforeOccupancy > 0
+              && calendarEventsAfterOccupancy === calendarEventsBeforeOccupancy
+          });
+        }, 300);
+      }
+    </script>
   </body>
 </html>

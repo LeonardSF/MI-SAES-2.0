@@ -1038,6 +1038,8 @@ textarea {
 
 .ms-option-list {
   display: grid;
+  grid-auto-rows: max-content;
+  align-content: start;
   max-height: 608px;
   gap: var(--space-xs);
   margin-block-start: var(--space-sm);
@@ -1045,6 +1047,123 @@ textarea {
   padding-inline-end: var(--space-xs);
   scrollbar-color: var(--color-rule-2) transparent;
   scrollbar-width: thin;
+}
+
+.ms-subject-option {
+  align-self: start;
+  min-width: 0;
+  border: var(--rule-thin) solid var(--color-rule);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  transition: border-color var(--dur-short) var(--ease-out), background-color var(--dur-short) var(--ease-out);
+}
+
+.ms-subject-option[data-selected="true"] {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.ms-subject-option__lead {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-sm);
+  align-items: center;
+  min-height: 60px;
+  padding: var(--space-sm);
+  cursor: pointer;
+}
+
+.ms-subject-option__lead > input,
+.ms-subject-group > input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--color-accent);
+}
+
+.ms-subject-option__lead > input:focus-visible,
+.ms-subject-group > input:focus-visible {
+  outline: 3px solid var(--color-focus-contrast);
+  outline-offset: 2px;
+}
+
+.ms-subject-option__copy {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-2xs);
+}
+
+.ms-subject-option__copy strong {
+  overflow-wrap: anywhere;
+  color: var(--color-ink);
+  font-size: var(--text-sm);
+  line-height: 1.3;
+}
+
+.ms-subject-option__copy span {
+  color: var(--color-neutral);
+  font-size: var(--text-xs);
+  line-height: 1.35;
+}
+
+.ms-subject-groups {
+  display: grid;
+  gap: var(--space-2xs);
+  padding: 0 var(--space-xs) var(--space-xs);
+}
+
+.ms-subject-group {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-xs);
+  align-items: start;
+  min-width: 0;
+  padding: var(--space-xs);
+  border: var(--rule-thin) solid var(--color-rule);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  cursor: pointer;
+}
+
+.ms-subject-group:has(input:checked) {
+  border-color: color-mix(in oklch, var(--color-success) 45%, var(--color-rule));
+  background: var(--color-success-soft);
+}
+
+.ms-subject-group[data-fit="conflict"]:has(input:checked) {
+  border-color: var(--color-error);
+  background: var(--color-error-soft);
+}
+
+.ms-subject-group__copy {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-2xs);
+  color: var(--color-neutral);
+  font-size: var(--text-xs);
+}
+
+.ms-subject-group__copy > span {
+  overflow-wrap: anywhere;
+}
+
+.ms-subject-group__top {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: var(--space-2xs) var(--space-xs);
+  align-items: center;
+}
+
+.ms-subject-group__top strong {
+  color: var(--color-ink);
+  font-family: var(--font-wordmark);
+  font-size: var(--text-sm);
+}
+
+.ms-subject-group__top > span:not(.ms-capacity-tag) {
+  color: var(--color-ink-2);
+  font-weight: 700;
 }
 
 .ms-option {
@@ -1203,8 +1322,7 @@ textarea {
   color: var(--color-error);
 }
 
-.ms-plan-header,
-.ms-proposal-header {
+.ms-plan-header {
   display: flex;
   gap: var(--space-sm);
   align-items: center;
@@ -1219,8 +1337,7 @@ textarea {
   background: var(--color-surface);
 }
 
-.ms-plan-header .ms-section__title,
-.ms-proposal-header strong {
+.ms-plan-header .ms-section__title {
   margin: 0;
 }
 
@@ -1427,6 +1544,21 @@ textarea {
   width: 100%;
 }
 
+.ms-planner-actionbar {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-xs);
+  margin-block-start: var(--space-sm);
+  padding: var(--space-md);
+  border-block: var(--rule-thin) solid var(--color-rule);
+  background: var(--color-paper-2);
+}
+
+.ms-planner-actionbar .ms-generate-help {
+  margin: 0;
+}
+
 .ms-generate-help[data-state="error"] {
   color: var(--color-error);
 }
@@ -1480,9 +1612,97 @@ textarea {
   border-block-start: var(--rule-thin) solid var(--color-rule);
 }
 
-.ms-proposal-picker {
-  width: auto;
-  min-width: 144px;
+.ms-proposal-carousel {
+  display: grid;
+  gap: var(--space-xs);
+  margin-block-start: var(--space-md);
+}
+
+.ms-proposal-carousel__header,
+.ms-proposal-carousel__actions {
+  display: flex;
+  gap: var(--space-xs);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ms-proposal-carousel__label {
+  font-size: var(--text-sm);
+}
+
+.ms-proposal-carousel__nav {
+  min-height: 36px;
+  padding: var(--space-2xs) var(--space-sm);
+  font-size: var(--text-xs);
+}
+
+.ms-proposal-carousel__track {
+  display: flex;
+  gap: var(--space-sm);
+  min-width: 0;
+  padding: var(--space-2xs) var(--space-2xs) var(--space-sm);
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scroll-behavior: smooth;
+  scroll-padding-inline: var(--space-2xs);
+  scroll-snap-type: inline mandatory;
+  scrollbar-color: var(--color-rule-2) transparent;
+  scrollbar-width: thin;
+}
+
+.ms-proposal-card {
+  display: grid;
+  flex: 0 0 clamp(184px, 24vw, 240px);
+  gap: var(--space-2xs);
+  min-height: 68px;
+  padding: var(--space-sm);
+  border: var(--rule-thin) solid var(--color-rule-2);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  cursor: pointer;
+  font: inherit;
+  scroll-snap-align: start;
+  text-align: start;
+}
+
+.ms-proposal-card strong,
+.ms-proposal-card span {
+  display: block;
+}
+
+.ms-proposal-card strong {
+  font-size: var(--text-sm);
+}
+
+.ms-proposal-card__metrics,
+.ms-proposal-card__groups {
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+}
+
+.ms-proposal-card__groups {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ms-proposal-card[aria-pressed="true"] {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+.ms-proposal-card[aria-pressed="true"] .ms-proposal-card__metrics,
+.ms-proposal-card[aria-pressed="true"] .ms-proposal-card__groups {
+  color: var(--color-accent);
+}
+
+@media (hover: hover) {
+  .ms-proposal-card:hover {
+    border-color: var(--color-accent);
+  }
+
 }
 
 .ms-proposal-preview {
@@ -1491,88 +1711,248 @@ textarea {
   margin-block-start: var(--space-sm);
 }
 
+.ms-schedule-metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(104px, 1fr));
+  margin: 0;
+  overflow-x: auto;
+  border: var(--rule-thin) solid var(--color-rule);
+  border-radius: var(--radius-md);
+  background: var(--color-paper-2);
+  scrollbar-color: var(--color-rule-2) transparent;
+  scrollbar-width: thin;
+}
+
+.ms-schedule-metric {
+  display: grid;
+  gap: var(--space-2xs);
+  min-width: 104px;
+  padding: var(--space-sm);
+}
+
+.ms-schedule-metric + .ms-schedule-metric {
+  border-inline-start: var(--rule-thin) solid var(--color-rule);
+}
+
+.ms-schedule-metric dt,
+.ms-schedule-metric dd {
+  margin: 0;
+}
+
+.ms-schedule-metric dt {
+  color: var(--color-neutral);
+  font-size: var(--text-xs);
+}
+
+.ms-schedule-metric dd {
+  color: var(--color-ink);
+  font-family: var(--font-wordmark);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.ms-calendar-frame {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  margin: var(--space-sm) 0 0;
+  overflow: hidden;
+  border: var(--rule-thin) solid var(--color-rule);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
 .ms-calendar-scroll {
   width: 100%;
   min-width: 0;
   max-width: 100%;
   overflow-x: auto;
-  border: var(--rule-thin) solid var(--color-rule);
-  margin-block-start: var(--space-sm);
-  border-radius: var(--radius-lg);
   background: var(--color-surface);
   scrollbar-color: var(--color-rule-2) transparent;
   scrollbar-width: thin;
 }
 
-.ms-calendar {
-  position: relative;
-  display: grid;
-  min-width: 640px;
-  isolation: isolate;
-}
-
-.ms-calendar__corner,
-.ms-calendar__day {
-  position: sticky;
-  inset-block-start: 0;
-  z-index: 4;
-  display: grid;
-  place-items: center;
-  border-block-end: var(--rule-thin) solid var(--color-rule-2);
-  background: var(--color-paper-2);
-  color: var(--color-ink-2);
+.ms-calendar-table {
+  width: 100%;
+  min-width: 680px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  color: var(--color-ink);
   font-size: var(--text-xs);
 }
 
-.ms-calendar__corner {
-  grid-column: 1;
-  grid-row: 1;
+.ms-calendar-table th,
+.ms-calendar-table td {
+  padding: var(--space-xs);
+  border-inline-start: var(--rule-thin) solid var(--color-rule);
+  border-block-end: var(--rule-thin) solid var(--color-rule);
+  line-height: 1.25;
+  text-align: center;
+  vertical-align: middle;
 }
 
-.ms-calendar__day {
-  grid-row: 1;
+.ms-calendar-table th:first-child,
+.ms-calendar-table td:first-child {
+  border-inline-start: 0;
 }
 
-.ms-calendar__time {
-  z-index: 2;
-  grid-column: 1;
-  align-self: start;
-  padding-inline-end: var(--space-xs);
+.ms-calendar-table thead th {
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+  font-weight: 700;
+}
+
+.ms-calendar-table thead th:first-child {
+  width: 72px;
+}
+
+.ms-calendar-table thead th:nth-child(2) {
+  width: min(240px, 26vw);
+  text-align: start;
+}
+
+.ms-calendar-table tbody tr:nth-child(even) {
+  background: var(--color-paper-2);
+}
+
+.ms-calendar-table tbody tr:last-child th,
+.ms-calendar-table tbody tr:last-child td {
+  border-block-end: 0;
+}
+
+.ms-calendar-table__group {
+  color: var(--color-accent);
+  font-family: var(--font-wordmark);
+  font-variant-numeric: tabular-nums;
+}
+
+.ms-calendar-table__subject {
+  overflow: hidden;
+  font-weight: 700;
+  text-align: start !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ms-calendar-table__time {
+  display: block;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ms-calendar-table__time + .ms-calendar-table__time {
+  margin-block-start: var(--space-2xs);
+}
+
+.ms-calendar-table__time[data-state="conflict"] {
+  border-radius: var(--radius-sm);
+  background: var(--color-error-soft);
+  color: var(--color-error);
+  font-weight: 700;
+}
+
+.ms-calendar-table__empty {
+  color: var(--color-rule-2);
+}
+
+.ms-calendar-table__availability {
+  width: 72px;
+  color: var(--color-success);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.ms-calendar-table__availability[data-state="low"] {
+  color: var(--color-warning);
+}
+
+.ms-calendar-table__availability[data-state="full"] {
+  color: var(--color-error);
+}
+
+.ms-calendar-table__availability[data-state="unknown"] {
+  color: var(--color-rule-2);
+}
+
+.ms-calendar-signature {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: var(--space-sm);
+  align-items: center;
+  padding: var(--space-xs) var(--space-sm);
+  border-block-start: var(--rule-thin) solid var(--color-rule);
+  background: var(--color-paper-2);
   color: var(--color-neutral);
   font-size: var(--text-xs);
-  font-variant-numeric: tabular-nums;
-  text-align: end;
-  transform: translateY(-0.55em);
 }
 
-.ms-calendar__column {
-  z-index: 0;
-  border-inline-start: var(--rule-thin) solid var(--color-rule);
-  background-image: linear-gradient(to bottom, transparent calc(100% - 1px), var(--color-rule) 1px);
-  background-size: 100% 56px;
-  pointer-events: none;
-}
-
-.ms-calendar__event {
-  z-index: 3;
-  display: grid;
-  align-content: start;
+.ms-calendar-signature__copy {
+  display: inline-flex;
+  grid-column: 2;
   gap: var(--space-2xs);
-  min-width: 0;
-  margin: 2px;
-  overflow: hidden;
-  padding: var(--space-xs);
-  border: var(--rule-thin) solid var(--color-success);
-  border-radius: var(--radius-sm);
-  background: var(--color-success-soft);
-  color: var(--color-ink);
+  align-items: center;
+  justify-self: center;
 }
 
-.ms-calendar__event[data-state="conflict"] {
-  z-index: 4;
-  border-color: var(--color-error);
-  background: var(--color-error-soft);
-  box-shadow: inset 0 0 0 1px var(--color-error);
+.ms-calendar-availability {
+  display: inline-flex;
+  grid-column: 1;
+  gap: var(--space-xs);
+  align-items: center;
+  justify-self: start;
+  min-height: 36px;
+  color: var(--color-ink);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.ms-calendar-availability input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--color-accent);
+}
+
+.ms-calendar-availability:has(input:disabled) {
+  color: var(--color-neutral);
+  cursor: not-allowed;
+}
+
+.ms-calendar-signature__copy::before {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+  content: "";
+}
+
+.ms-calendar-signature__copy strong {
+  color: var(--color-accent);
+  font-family: var(--font-wordmark);
+  font-weight: 600;
+}
+
+.ms-calendar-signature__download {
+  grid-column: 3;
+  justify-self: end;
+  min-height: 36px;
+  padding: var(--space-2xs) var(--space-sm);
+  font-size: var(--text-xs);
+}
+
+@media (max-width: 560px) {
+  .ms-calendar-signature {
+    grid-template-columns: 1fr;
+  }
+
+  .ms-calendar-availability,
+  .ms-calendar-signature__copy,
+  .ms-calendar-signature__download {
+    grid-column: 1;
+    justify-self: center;
+  }
 }
 
 .ms-calendar-legend {
@@ -1613,19 +1993,6 @@ textarea {
   background: var(--color-error-soft);
   color: var(--color-ink);
   font-size: var(--text-sm);
-}
-
-.ms-calendar__event strong,
-.ms-calendar__event span {
-  overflow: hidden;
-  font-size: var(--text-xs);
-  line-height: 1.2;
-  text-overflow: ellipsis;
-}
-
-.ms-calendar__event span {
-  color: var(--color-neutral);
-  font-variant-numeric: tabular-nums;
 }
 
 .ms-proposal-row {
@@ -2153,6 +2520,7 @@ textarea {
   .ms-selection-item__remove {
     grid-area: remove;
   }
+
 }
 
 @media (max-width: 480px) {
@@ -2187,6 +2555,31 @@ textarea {
 
   .ms-release-banner__items {
     display: grid;
+  }
+
+  .ms-schedule-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow-x: visible;
+  }
+
+  .ms-schedule-metric {
+    min-width: 0;
+  }
+
+  .ms-schedule-metric + .ms-schedule-metric {
+    border-inline-start: 0;
+  }
+
+  .ms-schedule-metric:nth-child(even) {
+    border-inline-start: var(--rule-thin) solid var(--color-rule);
+  }
+
+  .ms-schedule-metric:nth-child(n + 3) {
+    border-block-start: var(--rule-thin) solid var(--color-rule);
+  }
+
+  .ms-schedule-metric:last-child {
+    grid-column: 1 / -1;
   }
 
   .ms-release-banner__actions {

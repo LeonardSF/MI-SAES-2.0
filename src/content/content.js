@@ -93,6 +93,8 @@
   let plannerConfigurationError = "";
   let generatedSchedules = [];
   let activeGeneratedSchedule = 0;
+  let showCalendarAvailability = false;
+  const scheduleSortCriterion = "balanced";
   const isOfferingsCatalog = /\/academica\/horarios\.aspx$/i.test(location.pathname) || (isLocalPreview && /\/saes-schedule\.html$/i.test(location.pathname));
   const isReenrollmentPage = /\/alumnos\/reinscripciones\//i.test(location.pathname) || context === "reenrollment";
   const extensionVersion = chrome.runtime.getManifest?.().version || "0.12.4";
@@ -603,6 +605,15 @@
       .join(" · ");
   }
 
+  function formatDuration(minutes) {
+    const total = Math.max(0, Number(minutes) || 0);
+    const hours = Math.floor(total / 60);
+    const remainder = total % 60;
+    if (!hours) return `${remainder} min`;
+    if (!remainder) return `${hours} h`;
+    return `${hours} h ${remainder} min`;
+  }
+
   function conflictWindow(conflict) {
     return {
       day: conflict.left.day,
@@ -617,92 +628,246 @@
     return `${day} ${core.formatMinutes(window.start)}–${core.formatMinutes(window.end)}`;
   }
 
-  function calendarLanes(entries, days) {
-    const layouts = new Map();
-    const laneCounts = new Map();
-    days.forEach((day) => {
-      const dayEntries = entries
-        .filter((entry) => entry.day === day)
-        .sort((left, right) => left.start - right.start || left.end - right.end);
-      const laneEnds = [];
-      dayEntries.forEach((entry) => {
-        let lane = laneEnds.findIndex((end) => end <= entry.start);
-        if (lane < 0) lane = laneEnds.length;
-        laneEnds[lane] = entry.end;
-        layouts.set(entry, { lane, overlaps: dayEntries.some((other) => other !== entry && entry.start < other.end && other.start < entry.end) });
+  function downloadSchedulePng(rows, days, showAvailability = false) {
+    const scale = 2;
+    const width = 1200;
+    const headerHeight = 48;
+    const rowHeight = 52;
+    const footerHeight = 58;
+    const height = headerHeight + rows.length * rowHeight + footerHeight;
+    const groupWidth = 104;
+    const subjectWidth = 340;
+    const availabilityWidth = showAvailability ? 104 : 0;
+    const dayWidth = (width - groupWidth - subjectWidth - availabilityWidth) / Math.max(1, days.length);
+    const canvas = document.createElement("canvas");
+    canvas.width = width * scale;
+    canvas.height = height * scale;
+    const context = canvas.getContext("2d");
+    if (!context) return Promise.reject(new Error("El navegador no pudo preparar la imagen."));
+    context.scale(scale, scale);
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, width, height);
+
+    function fillText(text, x, y, maxWidth, { align = "left", weight = 400, color = "#292529", size = 14 } = {}) {
+      context.font = `${weight} ${size}px "IBM Plex Sans", Arial, sans-serif`;
+      context.fillStyle = color;
+      context.textAlign = align;
+      context.textBaseline = "middle";
+      let value = String(text || "");
+      if (context.measureText(value).width > maxWidth) {
+        while (value.length > 1 && context.measureText(`${value}…`).width > maxWidth) value = value.slice(0, -1);
+        value = `${value}…`;
+      }
+      context.fillText(value, x, y, maxWidth);
+    }
+
+    context.fillStyle = "#750946";
+    context.fillRect(0, 0, width, headerHeight);
+    const columns = [
+      { label: "Grupo", x: 0, width: groupWidth, align: "center" },
+      { label: "Materia", x: groupWidth, width: subjectWidth, align: "left" },
+      ...(showAvailability ? [{ label: "Lugares", x: groupWidth + subjectWidth, width: availabilityWidth, align: "center" }] : []),
+      ...days.map((day, index) => ({ label: day.slice(0, 3), x: groupWidth + subjectWidth + availabilityWidth + index * dayWidth, width: dayWidth, align: "center" }))
+    ];
+    columns.forEach((column) => fillText(column.label, column.align === "center" ? column.x + column.width / 2 : column.x + 14, headerHeight / 2, column.width - 28, { align: column.align, weight: 700, color: "#ffffff", size: 14 }));
+
+    rows.forEach((course, rowIndex) => {
+      const top = headerHeight + rowIndex * rowHeight;
+      context.fillStyle = rowIndex % 2 ? "#f5f1f3" : "#ffffff";
+      context.fillRect(0, top, width, rowHeight);
+      const separator = course.label.lastIndexOf(" · ");
+      const subject = separator >= 0 ? course.label.slice(0, separator) : course.label;
+      const group = separator >= 0 ? course.label.slice(separator + 3) : "—";
+      fillText(group, groupWidth / 2, top + rowHeight / 2, groupWidth - 20, { align: "center", weight: 700, color: "#750946", size: 14 });
+      fillText(subject, groupWidth + 14, top + rowHeight / 2, subjectWidth - 28, { weight: 700, size: 14 });
+      if (showAvailability) {
+        const availability = Number.isFinite(course.available) ? String(course.available) : "—";
+        const availabilityColor = course.available === 0 ? "#a61b1b" : course.available <= 3 ? "#8a5300" : "#17633a";
+        fillText(availability, groupWidth + subjectWidth + availabilityWidth / 2, top + rowHeight / 2, availabilityWidth - 20, { align: "center", weight: 700, color: Number.isFinite(course.available) ? availabilityColor : "#aaa1a7", size: 14 });
+      }
+      days.forEach((day, dayIndex) => {
+        const dayEntries = course.entries.filter((entry) => entry.day === day).sort((left, right) => left.start - right.start || left.end - right.end);
+        const value = dayEntries.length
+          ? dayEntries.map((entry) => `${core.formatMinutes(entry.start)}–${core.formatMinutes(entry.end)}`).join(" / ")
+          : "—";
+        fillText(value, groupWidth + subjectWidth + availabilityWidth + dayIndex * dayWidth + dayWidth / 2, top + rowHeight / 2, dayWidth - 16, { align: "center", color: dayEntries.length ? "#292529" : "#aaa1a7", size: 13 });
       });
-      laneCounts.set(day, Math.max(1, laneEnds.length));
+      context.strokeStyle = "#ded7db";
+      context.lineWidth = 1;
+      context.beginPath();
+      context.moveTo(0, top + rowHeight - 0.5);
+      context.lineTo(width, top + rowHeight - 0.5);
+      context.stroke();
     });
-    return { layouts, laneCounts };
+
+    const footerTop = headerHeight + rows.length * rowHeight;
+    context.fillStyle = "#f5f1f3";
+    context.fillRect(0, footerTop, width, footerHeight);
+    context.fillStyle = "#750946";
+    context.beginPath();
+    context.arc(width / 2 - 132, footerTop + footerHeight / 2, 4, 0, Math.PI * 2);
+    context.fill();
+    fillText("Horario generado por", width / 2 - 118, footerTop + footerHeight / 2, 160, { color: "#6d6369", size: 13 });
+    fillText("MI SAES 2.0", width / 2 + 32, footerTop + footerHeight / 2, 180, { weight: 700, color: "#750946", size: 14 });
+
+    const dataUrl = canvas.toDataURL("image/png");
+    const binary = atob(dataUrl.split(",")[1] || "");
+    if (!binary) return Promise.reject(new Error("El navegador no pudo generar el PNG."));
+    const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+    const blob = new Blob([bytes], { type: "image/png" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `mi-saes-horario-${new Date().toISOString().slice(0, 10)}.png`;
+    anchor.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    return Promise.resolve();
   }
 
-  function buildCalendarGrid(entries, conflictingEntries = new Set()) {
+  function buildCalendarGrid(entries, conflictingEntries = new Set(), options = {}) {
+    const offerings = Array.isArray(options.offerings) ? options.offerings : [];
+    const availabilityEnabled = options.availabilityEnabled === true;
+    const displayAvailability = availabilityEnabled && showCalendarAvailability;
+    const availabilityByLabel = new Map();
+    offerings.forEach((offering) => {
+      const label = String(offering.entries?.[0]?.label || `${offering.subject || "Materia sin nombre"} · ${offering.group || "—"}`).trim();
+      const record = occupancyFor(offering);
+      availabilityByLabel.set(label, Number.isFinite(record?.available) ? record.available : null);
+    });
+    const frame = document.createElement("figure");
+    frame.className = "ms-calendar-frame";
     const wrapper = document.createElement("div");
     wrapper.className = "ms-calendar-scroll";
-    const grid = document.createElement("div");
-    grid.className = "ms-calendar";
     const dayOrder = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
     const days = dayOrder.filter((day) => entries.some((entry) => entry.day === day));
-    const { layouts, laneCounts } = calendarLanes(entries, days);
-    const dayStarts = new Map();
-    let nextColumn = 2;
-    days.forEach((day) => {
-      dayStarts.set(day, nextColumn);
-      nextColumn += laneCounts.get(day);
-    });
-    const earliest = Math.floor(Math.min(...entries.map((entry) => entry.start)) / 30) * 30;
-    const latest = Math.ceil(Math.max(...entries.map((entry) => entry.end)) / 30) * 30;
-    const slots = Math.max(1, (latest - earliest) / 30);
-    const laneTotal = [...laneCounts.values()].reduce((total, count) => total + count, 0);
-    grid.style.gridTemplateColumns = `3.5rem repeat(${laneTotal}, minmax(6.5rem, 1fr))`;
-    grid.style.gridTemplateRows = `2rem repeat(${slots}, 1.75rem)`;
-
-    const corner = document.createElement("span");
-    corner.className = "ms-calendar__corner";
-    grid.append(corner);
-    days.forEach((day) => {
-      const header = document.createElement("strong");
-      header.className = "ms-calendar__day";
-      const start = dayStarts.get(day);
-      header.style.gridColumn = `${start} / ${start + laneCounts.get(day)}`;
-      header.textContent = day.slice(0, 3);
-      grid.append(header);
-    });
-    for (let slot = 0; slot < slots; slot += 2) {
-      const time = document.createElement("span");
-      time.className = "ms-calendar__time";
-      time.style.gridRow = String(slot + 2);
-      time.textContent = core.formatMinutes(earliest + slot * 30);
-      grid.append(time);
-    }
-    days.forEach((day) => {
-      const column = document.createElement("span");
-      column.className = "ms-calendar__column";
-      const start = dayStarts.get(day);
-      column.style.gridColumn = `${start} / ${start + laneCounts.get(day)}`;
-      column.style.gridRow = `2 / ${slots + 2}`;
-      grid.append(column);
-    });
+    const courses = new Map();
     entries.forEach((entry) => {
-      if (!dayStarts.has(entry.day)) return;
-      const block = document.createElement("div");
-      block.className = "ms-calendar__event";
-      const isConflict = conflictingEntries.has(entry);
-      block.dataset.state = isConflict ? "conflict" : "compatible";
-      const layout = layouts.get(entry);
-      const dayStart = dayStarts.get(entry.day);
-      block.style.gridColumn = layout?.overlaps ? String(dayStart + layout.lane) : `${dayStart} / ${dayStart + laneCounts.get(entry.day)}`;
-      block.style.gridRow = `${2 + (entry.start - earliest) / 30} / ${2 + (entry.end - earliest) / 30}`;
-      const subject = document.createElement("strong");
-      subject.textContent = entry.label;
-      const time = document.createElement("span");
-      time.textContent = `${core.formatMinutes(entry.start)}–${core.formatMinutes(entry.end)}`;
-      block.append(subject, time);
-      block.setAttribute("aria-label", `${entry.label}, ${time.textContent}, ${isConflict ? "con traslape" : "compatible"}`);
-      grid.append(block);
+      const label = String(entry.label || "Materia sin nombre").trim();
+      if (!courses.has(label)) courses.set(label, { label, entries: [], available: availabilityByLabel.get(label) });
+      courses.get(label).entries.push(entry);
     });
-    wrapper.append(grid);
-    return wrapper;
+    const rows = [...courses.values()].sort((left, right) => {
+      const leftStart = Math.min(...left.entries.map((entry) => entry.start));
+      const rightStart = Math.min(...right.entries.map((entry) => entry.start));
+      return leftStart - rightStart || left.label.localeCompare(right.label, "es-MX");
+    });
+
+    const table = document.createElement("table");
+    table.className = "ms-calendar-table";
+    table.setAttribute("aria-label", "Horario semanal generado");
+    const head = document.createElement("thead");
+    const headerRow = document.createElement("tr");
+    ["Grupo", "Materia", ...(displayAvailability ? ["Lugares"] : []), ...days.map((day) => day.slice(0, 3))].forEach((label, index) => {
+      const header = document.createElement("th");
+      header.scope = "col";
+      header.textContent = label;
+      const dayIndex = index - 2 - (displayAvailability ? 1 : 0);
+      if (dayIndex >= 0) header.title = days[dayIndex];
+      headerRow.append(header);
+    });
+    head.append(headerRow);
+    const body = document.createElement("tbody");
+    rows.forEach((course) => {
+      const row = document.createElement("tr");
+      const separator = course.label.lastIndexOf(" · ");
+      const subject = separator >= 0 ? course.label.slice(0, separator) : course.label;
+      const group = separator >= 0 ? course.label.slice(separator + 3) : "—";
+      const groupCell = document.createElement("th");
+      groupCell.scope = "row";
+      groupCell.className = "ms-calendar-table__group";
+      groupCell.textContent = group;
+      const subjectCell = document.createElement("td");
+      subjectCell.className = "ms-calendar-table__subject";
+      subjectCell.textContent = subject;
+      subjectCell.title = subject;
+      row.append(groupCell, subjectCell);
+      if (displayAvailability) {
+        const availabilityCell = document.createElement("td");
+        availabilityCell.className = "ms-calendar-table__availability";
+        availabilityCell.dataset.state = !Number.isFinite(course.available) ? "unknown" : course.available === 0 ? "full" : course.available <= 3 ? "low" : "available";
+        availabilityCell.textContent = Number.isFinite(course.available) ? String(course.available) : "—";
+        availabilityCell.title = Number.isFinite(course.available)
+          ? `${course.available} lugar${course.available === 1 ? "" : "es"} disponible${course.available === 1 ? "" : "s"}`
+          : "Sin información actual de lugares";
+        row.append(availabilityCell);
+      }
+      days.forEach((day) => {
+        const cell = document.createElement("td");
+        const dayEntries = course.entries
+          .filter((entry) => entry.day === day)
+          .sort((left, right) => left.start - right.start || left.end - right.end);
+        if (!dayEntries.length) {
+          cell.className = "ms-calendar-table__empty";
+          cell.textContent = "—";
+        } else {
+          dayEntries.forEach((entry) => {
+            const time = document.createElement("span");
+            time.className = "ms-calendar-table__time";
+            time.dataset.calendarEntry = "true";
+            time.dataset.state = conflictingEntries.has(entry) ? "conflict" : "compatible";
+            time.textContent = `${core.formatMinutes(entry.start)}–${core.formatMinutes(entry.end)}`;
+            cell.append(time);
+          });
+        }
+        row.append(cell);
+      });
+      body.append(row);
+    });
+    table.append(head, body);
+    wrapper.append(table);
+    const signature = document.createElement("figcaption");
+    signature.className = "ms-calendar-signature";
+    if (options.showAvailabilityControl) {
+      const availabilityControl = document.createElement("label");
+      availabilityControl.className = "ms-calendar-availability";
+      const availabilityCheckbox = document.createElement("input");
+      availabilityCheckbox.type = "checkbox";
+      availabilityCheckbox.dataset.calendarAvailability = "true";
+      availabilityCheckbox.checked = displayAvailability;
+      availabilityCheckbox.disabled = !availabilityEnabled;
+      availabilityCheckbox.setAttribute("aria-label", "Mostrar lugares actuales");
+      if (!availabilityEnabled) availabilityControl.title = "Activa Mostrar lugares disponibles y consulta SAES para ver los cupos actuales.";
+      availabilityCheckbox.addEventListener("change", () => {
+        showCalendarAvailability = availabilityCheckbox.checked;
+        options.onAvailabilityChange?.(showCalendarAvailability);
+      });
+      availabilityControl.append(availabilityCheckbox, document.createTextNode("Mostrar lugares actuales"));
+      signature.append(availabilityControl);
+    }
+    const signatureCopy = document.createElement("span");
+    signatureCopy.className = "ms-calendar-signature__copy";
+    signatureCopy.append(document.createTextNode("Horario generado por "));
+    const brand = document.createElement("strong");
+    brand.textContent = "MI SAES 2.0";
+    signatureCopy.append(brand);
+    const pngButton = document.createElement("button");
+    pngButton.type = "button";
+    pngButton.className = "ms-button ms-button--quiet ms-calendar-signature__download";
+    pngButton.dataset.downloadSchedulePng = "true";
+    pngButton.textContent = "Descargar PNG";
+    pngButton.addEventListener("click", async () => {
+      pngButton.disabled = true;
+      pngButton.textContent = "Generando PNG";
+      try {
+        await downloadSchedulePng(rows, days, displayAvailability);
+        pngButton.dataset.state = "success";
+        pngButton.textContent = "PNG descargado";
+        announce("Horario descargado como PNG");
+      } catch (error) {
+        pngButton.dataset.state = "error";
+        pngButton.textContent = "Reintentar PNG";
+        announce(error?.message || "No fue posible generar el PNG");
+      } finally {
+        pngButton.disabled = false;
+        setTimeout(() => {
+          delete pngButton.dataset.state;
+          pngButton.textContent = "Descargar PNG";
+        }, 2200);
+      }
+    });
+    signature.append(signatureCopy, pngButton);
+    frame.append(wrapper, signature);
+    return frame;
   }
 
   function renderCalendarExport(entries, parent, label = "horario") {
@@ -762,13 +927,13 @@
     heading.textContent = "Arma tu Horario";
     const lede = document.createElement("p");
     lede.className = "ms-lede";
-    lede.textContent = "Compara grupos, guarda alternativas y genera un horario sin empalmes. Nada se envía a SAES.";
+    lede.textContent = "Elige las materias que quieres cursar, descarta los grupos que no aceptarías y genera horarios sin empalmes. Nada se envía a SAES.";
     const workflow = document.createElement("ol");
     workflow.className = "ms-planner-steps";
     const workflowSteps = [
       ["Escanea", "Carga todas las materias"],
-      ["Elige", "Marca tus grupos candidatos"],
-      ["Genera", "Resuelve avisos y compara"]
+      ["Materias", "Elige qué quieres cursar"],
+      ["Grupos", "Ajusta alternativas y genera"]
     ].map(([title, detail], index) => {
       const item = document.createElement("li");
       item.className = "ms-planner-step";
@@ -1163,12 +1328,12 @@
     browserHeader.className = "ms-browser-header";
     const browserTitle = document.createElement("h3");
     browserTitle.className = "ms-section__title";
-    browserTitle.textContent = "Materias disponibles";
+    browserTitle.textContent = "Elige tus materias";
     const search = document.createElement("input");
     search.className = "ms-input";
     search.type = "search";
-    search.placeholder = "Materia, grupo o profesor";
-    search.setAttribute("aria-label", "Buscar grupo candidato");
+    search.placeholder = "Buscar materia, grupo o profesor";
+    search.setAttribute("aria-label", "Buscar materia disponible");
     const resultCount = document.createElement("p");
     resultCount.className = "ms-helper";
     const detectedPeriods = [...new Set(courseOfferings.map((offering) => String(offering.source?.period || "")).filter(Boolean))]
@@ -1259,7 +1424,7 @@
     planHeader.className = "ms-plan-header";
     const planTitle = document.createElement("h3");
     planTitle.className = "ms-section__title";
-    planTitle.textContent = "Tu selección";
+    planTitle.textContent = "Materias y grupos aceptables";
     const selectionCount = document.createElement("span");
     selectionCount.className = "ms-count";
     planHeader.append(planTitle, selectionCount);
@@ -1278,7 +1443,7 @@
     const clear = document.createElement("button");
     clear.type = "button";
     clear.className = "ms-button";
-    clear.textContent = "Borrar selección";
+    clear.textContent = "Quitar materias";
     const actions = document.createElement("div");
     actions.className = "ms-row ms-plan-actions";
     actions.append(generate, clear);
@@ -1286,10 +1451,14 @@
     generateHelp.id = "ms-generate-help";
     generateHelp.className = "ms-helper ms-generate-help";
     generate.setAttribute("aria-describedby", generateHelp.id);
+    const plannerActionBar = document.createElement("section");
+    plannerActionBar.className = "ms-planner-actionbar";
+    plannerActionBar.setAttribute("aria-label", "Acciones del generador de horarios");
+    plannerActionBar.append(actions, generateHelp);
     const proposals = document.createElement("div");
     proposals.className = "ms-proposals";
-    plan.append(planHeader, planStatus, selectionSummary, actions, generateHelp);
-    workspace.append(browser, plan, proposals);
+    plan.append(planHeader, planStatus, selectionSummary);
+    workspace.append(browser, plan, plannerActionBar, proposals);
     view.append(workspace);
 
     let generationError = "";
@@ -1362,9 +1531,7 @@
     }
 
     function conflictsForOffering(offering, selected) {
-      const comparison = plannerSelection.has(offering.id)
-        ? selected.filter((candidate) => candidate.id !== offering.id)
-        : selected.filter((candidate) => core.normalizeText(candidate.subject) !== core.normalizeText(offering.subject));
+      const comparison = selected.filter((candidate) => core.normalizeText(candidate.subject) !== core.normalizeText(offering.subject));
       const candidateEntries = offering.entries || [];
       return core.findScheduleConflicts(comparison.flatMap((candidate) => candidate.entries || []).concat(candidateEntries))
         .filter((conflict) => candidateEntries.includes(conflict.left) || candidateEntries.includes(conflict.right));
@@ -1386,7 +1553,8 @@
         availableOnly,
         availableIds
       });
-      resultCount.textContent = `${filtered.length} de ${courseOfferings.length} grupos`;
+      const filteredSubjects = core.plannerSubjectGroups(filtered, plannerSelection);
+      resultCount.textContent = `${filteredSubjects.length} de ${core.plannerSubjectGroups(courseOfferings).length} materias`;
       optionList.replaceChildren();
       compatibleFilter.checked = compatibleOnly;
       availableFilter.checked = availableOnly;
@@ -1402,75 +1570,93 @@
         optionList.append(makeEmpty("No hay grupos con estos filtros", "Prueba otra búsqueda o desactiva un filtro."));
         return;
       }
-      filtered.forEach((offering) => {
-        const occupancy = occupancyFor(offering);
-        const checked = plannerSelection.has(offering.id);
-        const candidateEntries = offering.entries || [];
-        const fitConflicts = conflictsForOffering(offering, selected);
-        const conflictDetails = [...new Set(fitConflicts.map((conflict) => {
-          const other = candidateEntries.includes(conflict.left) ? conflict.right.label : conflict.left.label;
-          return `${formatConflictWindow(conflict, { compact: true })} con ${other}`;
-        }))];
-        const option = document.createElement("article");
-        option.className = "ms-option";
-        option.dataset.fit = fitConflicts.length ? "conflict" : "compatible";
-        if (occupancy) option.dataset.capacity = occupancy.available === 0 ? "full" : occupancy.available <= 3 ? "low" : "available";
-        const lead = document.createElement("label");
-        lead.className = "ms-option__lead";
-        const checkbox = document.createElement("input");
-        checkbox.type = "checkbox";
-        checkbox.checked = checked;
-        checkbox.setAttribute("aria-label", `Agregar ${offering.subject}, grupo ${offering.group}`);
-        const copy = document.createElement("span");
-        copy.className = "ms-option__copy";
-        const top = document.createElement("span");
-        top.className = "ms-option__top";
-        const subject = document.createElement("strong");
-        subject.textContent = offering.subject;
-        const group = document.createElement("span");
-        group.className = "ms-group-tag";
-        group.textContent = offering.group;
-        const tags = document.createElement("span");
-        tags.className = "ms-option__tags";
-        tags.append(group);
-        if (occupancy) {
-          const capacity = document.createElement("span");
-          capacity.className = "ms-capacity-tag";
-          capacity.dataset.state = occupancy.available === 0 ? "full" : occupancy.available <= 3 ? "low" : "available";
-          capacity.textContent = occupancy.available === 0 ? "Lleno" : `${occupancy.available} lugar${occupancy.available === 1 ? "" : "es"}`;
-          capacity.title = `Cupo ${occupancy.capacity ?? "—"} · Inscritos ${occupancy.enrolled ?? "—"} · Disponibles ${occupancy.available}`;
-          tags.append(capacity);
+      filteredSubjects.forEach((subjectGroup) => {
+        const allSubjectOfferings = courseOfferings.filter((offering) => core.normalizeText(offering.subject) === subjectGroup.key);
+        const acceptedCount = allSubjectOfferings.filter((offering) => plannerSelection.has(offering.id)).length;
+        const subjectCard = document.createElement("article");
+        subjectCard.className = "ms-subject-option";
+        subjectCard.dataset.selected = acceptedCount ? "true" : "false";
+        const subjectLead = document.createElement("label");
+        subjectLead.className = "ms-subject-option__lead";
+        const subjectCheckbox = document.createElement("input");
+        subjectCheckbox.type = "checkbox";
+        subjectCheckbox.checked = acceptedCount > 0;
+        subjectCheckbox.setAttribute("aria-label", `Seleccionar materia ${subjectGroup.subject}`);
+        const subjectCopy = document.createElement("span");
+        subjectCopy.className = "ms-subject-option__copy";
+        const subjectName = document.createElement("strong");
+        subjectName.textContent = subjectGroup.subject;
+        const subjectMeta = document.createElement("span");
+        subjectMeta.textContent = acceptedCount
+          ? `${acceptedCount} de ${allSubjectOfferings.length} grupos aceptados`
+          : `${allSubjectOfferings.length} grupo${allSubjectOfferings.length === 1 ? "" : "s"} disponible${allSubjectOfferings.length === 1 ? "" : "s"}`;
+        subjectCopy.append(subjectName, subjectMeta);
+        subjectLead.append(subjectCheckbox, subjectCopy);
+        subjectCard.append(subjectLead);
+
+        if (acceptedCount) {
+          const groupList = document.createElement("div");
+          groupList.className = "ms-subject-groups";
+          allSubjectOfferings.forEach((offering) => {
+            const occupancy = occupancyFor(offering);
+            const fitConflicts = conflictsForOffering(offering, selected);
+            const groupLabel = document.createElement("label");
+            groupLabel.className = "ms-subject-group";
+            groupLabel.dataset.fit = fitConflicts.length ? "conflict" : "compatible";
+            const groupCheckbox = document.createElement("input");
+            groupCheckbox.type = "checkbox";
+            groupCheckbox.checked = plannerSelection.has(offering.id);
+            groupCheckbox.setAttribute("aria-label", `Aceptar grupo ${offering.group} de ${offering.subject}`);
+            const groupCopy = document.createElement("span");
+            groupCopy.className = "ms-subject-group__copy";
+            const groupTop = document.createElement("span");
+            groupTop.className = "ms-subject-group__top";
+            const groupName = document.createElement("strong");
+            groupName.textContent = offering.group;
+            const groupSource = document.createElement("span");
+            groupSource.textContent = offering.source ? `P${offering.source.period} · ${offering.source.shift}` : "Periodo no indicado";
+            groupTop.append(groupName, groupSource);
+            const teacher = document.createElement("span");
+            teacher.textContent = offering.teacher || "Profesor no indicado";
+            const times = document.createElement("span");
+            times.textContent = formatOfferingTimes(offering) || "Horario no indicado";
+            groupCopy.append(groupTop, teacher, times);
+            if (occupancy) {
+              const capacity = document.createElement("span");
+              capacity.className = "ms-capacity-tag";
+              capacity.dataset.state = occupancy.available === 0 ? "full" : occupancy.available <= 3 ? "low" : "available";
+              capacity.textContent = occupancy.available === 0 ? "Lleno" : `${occupancy.available} lugar${occupancy.available === 1 ? "" : "es"}`;
+              groupTop.append(capacity);
+            }
+            groupLabel.append(groupCheckbox, groupCopy);
+            groupCheckbox.addEventListener("change", async () => {
+              if (groupCheckbox.checked) plannerSelection.add(offering.id);
+              else plannerSelection.delete(offering.id);
+              generatedSchedules = [];
+              generationError = "";
+              activeGeneratedSchedule = 0;
+              await persistPlannerSelection();
+              renderOptions();
+              updatePlan();
+            });
+            groupList.append(groupLabel);
+          });
+          subjectCard.append(groupList);
         }
-        top.append(subject, tags);
-        const teacher = document.createElement("span");
-        teacher.className = "ms-option__teacher";
-        teacher.textContent = offering.teacher || "Profesor no indicado";
-        const source = document.createElement("span");
-        source.className = "ms-option__source";
-        source.textContent = offering.source ? `Periodo ${offering.source.period} · ${offering.source.shift}` : "Periodo no indicado";
-        const times = document.createElement("span");
-        times.className = "ms-option__times";
-        times.textContent = formatOfferingTimes(offering) || "Horario no indicado";
-        copy.append(top, teacher, source, times);
-        if (conflictDetails.length) {
-          const conflictDetail = document.createElement("span");
-          conflictDetail.className = "ms-option__conflict-detail";
-          conflictDetail.textContent = `Traslape · ${conflictDetails.slice(0, 1).join(" · ")}`;
-          copy.append(conflictDetail);
-        }
-        lead.append(checkbox, copy);
-        option.append(lead);
-        checkbox.addEventListener("change", async () => {
-          if (checkbox.checked) plannerSelection.add(offering.id);
-          else plannerSelection.delete(offering.id);
+
+        subjectCheckbox.addEventListener("change", async () => {
+          plannerSelection = core.setPlannerSubjectSelected(courseOfferings, plannerSelection, subjectGroup.subject, subjectCheckbox.checked);
           generatedSchedules = [];
           generationError = "";
           activeGeneratedSchedule = 0;
           await persistPlannerSelection();
           renderOptions();
           updatePlan();
+          announce(subjectCheckbox.checked
+            ? `${subjectGroup.subject}: todos sus grupos están disponibles para generar`
+            : `${subjectGroup.subject} se quitó de tus materias`);
         });
-        optionList.append(option);
+        optionList.append(subjectCard);
       });
     }
 
@@ -1479,66 +1665,122 @@
       if (!generatedSchedules.length) {
         const selected = selectedOfferings();
         if (!selected.length) return;
-        const entries = selected.flatMap((offering) => offering.entries || []);
-        const draftConflicts = core.findScheduleConflicts(entries);
-        const conflictEntries = new Set(draftConflicts.flatMap((conflict) => [conflict.left, conflict.right]));
-        const proposalHeader = document.createElement("div");
-        proposalHeader.className = "ms-proposal-header";
-        const title = document.createElement("strong");
-        title.textContent = "Calendario de candidatos";
-        const legend = document.createElement("div");
-        legend.className = "ms-calendar-legend";
-        legend.innerHTML = `<span data-state="compatible">Compatible</span><span data-state="conflict">Traslape</span>`;
-        proposalHeader.append(title, legend);
-        proposals.append(proposalHeader, buildCalendarGrid(entries, conflictEntries));
-        if (draftConflicts.length) {
-          const conflictList = document.createElement("ul");
-          conflictList.className = "ms-conflict-list";
-          draftConflicts.slice(0, 8).forEach((conflict) => {
-            const item = document.createElement("li");
-            item.textContent = `${formatConflictWindow(conflict)}: ${conflict.left.label} ↔ ${conflict.right.label}`;
-            conflictList.append(item);
-          });
-          proposals.append(conflictList);
-        }
+        const pending = document.createElement("p");
+        pending.className = "ms-helper ms-proposals__pending";
+        pending.textContent = "Genera horarios para ver una combinación completa. Los grupos de una misma materia son alternativas y no se muestran juntos.";
+        proposals.append(pending);
         return;
       }
-      const proposalHeader = document.createElement("div");
-      proposalHeader.className = "ms-proposal-header";
-      const title = document.createElement("strong");
-      title.textContent = core.generatedScheduleCopy(generatedSchedules.length).title;
-      const picker = document.createElement("select");
-      picker.className = "ms-select ms-proposal-picker";
-      picker.setAttribute("aria-label", "Elegir horario generado");
-      generatedSchedules.forEach((_schedule, index) => {
-        const option = document.createElement("option");
-        option.value = String(index);
-        option.textContent = core.generatedScheduleCopy(generatedSchedules.length, index).option;
-        picker.append(option);
+      const carousel = document.createElement("div");
+      carousel.className = "ms-proposal-carousel";
+      const carouselLabel = document.createElement("strong");
+      carouselLabel.className = "ms-proposal-carousel__label";
+      carouselLabel.textContent = "Horarios generados";
+      const carouselActions = document.createElement("div");
+      carouselActions.className = "ms-proposal-carousel__actions";
+      const previous = document.createElement("button");
+      previous.type = "button";
+      previous.className = "ms-button ms-button--quiet ms-proposal-carousel__nav";
+      previous.textContent = "Anterior";
+      const next = document.createElement("button");
+      next.type = "button";
+      next.className = "ms-button ms-button--quiet ms-proposal-carousel__nav";
+      next.textContent = "Siguiente";
+      carouselActions.append(previous, next);
+      const track = document.createElement("div");
+      track.className = "ms-proposal-carousel__track";
+      track.setAttribute("aria-label", "Horarios generados");
+      const cards = [];
+      generatedSchedules.forEach((schedule, index) => {
+        const metrics = schedule.metrics || core.scheduleMetrics(schedule.entries);
+        const card = document.createElement("button");
+        card.type = "button";
+        card.className = "ms-proposal-card";
+        card.dataset.scheduleIndex = String(index);
+        card.setAttribute("aria-pressed", String(index === activeGeneratedSchedule));
+        card.setAttribute("aria-label", `Ver ${core.generatedScheduleCopy(generatedSchedules.length, index).option}, ${metrics.attendanceDays} días y ${formatDuration(metrics.idleMinutes)} libres`);
+        const cardTitle = document.createElement("strong");
+        cardTitle.textContent = core.generatedScheduleCopy(generatedSchedules.length, index).option;
+        const cardMetrics = document.createElement("span");
+        cardMetrics.className = "ms-proposal-card__metrics";
+        cardMetrics.textContent = `${metrics.attendanceDays} días · ${formatDuration(metrics.idleMinutes)} libres`;
+        const cardGroups = document.createElement("span");
+        cardGroups.className = "ms-proposal-card__groups";
+        cardGroups.textContent = (schedule.offerings || []).map((offering) => offering.group).filter(Boolean).join(" · ") || "Grupos sin identificar";
+        card.append(cardTitle, cardMetrics, cardGroups);
+        cards.push(card);
+        track.append(card);
       });
-      picker.value = String(activeGeneratedSchedule);
-      proposalHeader.append(title, picker);
+      const carouselTop = document.createElement("div");
+      carouselTop.className = "ms-proposal-carousel__header";
+      carouselTop.append(carouselLabel, carouselActions);
+      carousel.append(carouselTop, track);
       const preview = document.createElement("div");
       preview.className = "ms-proposal-preview";
 
-      function drawProposal() {
-        activeGeneratedSchedule = Number(picker.value);
+      function drawProposal(index = activeGeneratedSchedule, shouldFocus = false) {
+        activeGeneratedSchedule = Math.max(0, Math.min(generatedSchedules.length - 1, Number(index)));
         const selected = generatedSchedules[activeGeneratedSchedule];
+        if (!selected) return;
+        cards.forEach((card, cardIndex) => {
+          const isActive = cardIndex === activeGeneratedSchedule;
+          card.setAttribute("aria-pressed", String(isActive));
+          card.tabIndex = isActive ? 0 : -1;
+        });
+        const activeCard = cards[activeGeneratedSchedule];
+        activeCard?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+        if (shouldFocus) activeCard?.focus({ preventScroll: true });
+        const metrics = selected.metrics || core.scheduleMetrics(selected.entries);
+        const metricList = document.createElement("dl");
+        metricList.className = "ms-schedule-metrics";
+        [
+          ["Días", String(metrics.attendanceDays)],
+          ["Horas de clase", formatDuration(metrics.classMinutes)],
+          ["Tiempo libre", formatDuration(metrics.idleMinutes)],
+          ["Primera entrada", core.formatMinutes(metrics.earliestStart)],
+          ["Última salida", core.formatMinutes(metrics.latestEnd)]
+        ].forEach(([label, value]) => {
+          const metric = document.createElement("div");
+          metric.className = "ms-schedule-metric";
+          const term = document.createElement("dt");
+          term.textContent = label;
+          const detail = document.createElement("dd");
+          detail.textContent = value;
+          metric.append(term, detail);
+          metricList.append(metric);
+        });
         preview.replaceChildren();
-        preview.append(buildCalendarGrid(selected.entries));
+        preview.append(metricList, buildCalendarGrid(selected.entries, new Set(), {
+          offerings: selected.offerings,
+          availabilityEnabled: occupancyEnabled && Boolean(occupancyCatalog?.records?.length),
+          showAvailabilityControl: true,
+          onAvailabilityChange: () => drawProposal(activeGeneratedSchedule)
+        }));
       }
-      picker.addEventListener("change", drawProposal);
-      proposals.append(proposalHeader, preview);
+      cards.forEach((card, index) => card.addEventListener("click", () => {
+        drawProposal(index);
+        announce(`${core.generatedScheduleCopy(generatedSchedules.length, index).option} seleccionada`);
+      }));
+      previous.addEventListener("click", () => drawProposal((activeGeneratedSchedule - 1 + generatedSchedules.length) % generatedSchedules.length, true));
+      next.addEventListener("click", () => drawProposal((activeGeneratedSchedule + 1) % generatedSchedules.length, true));
+      track.addEventListener("keydown", (event) => {
+        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+        event.preventDefault();
+        const offset = event.key === "ArrowRight" ? 1 : -1;
+        drawProposal((activeGeneratedSchedule + offset + generatedSchedules.length) % generatedSchedules.length, true);
+      });
+      proposals.append(carousel, preview);
       drawProposal();
     }
 
     function updatePlan() {
       const selected = selectedOfferings();
+      const selectedSubjects = core.plannerSubjectGroups(courseOfferings, plannerSelection).filter((subject) => subject.selected);
       const fullSelected = occupancyEnabled ? selected.filter((offering) => occupancyFor(offering)?.available === 0) : [];
       const generation = generationCandidates(selected);
       // Un solo diagnóstico alimenta el resumen, los pasos y las recuperaciones para evitar mensajes contradictorios.
       const diagnostics = core.plannerDiagnostics(selected, { blockedSubjects: generation.blockedSubjects });
-      selectionCount.textContent = `${selected.length} grupo${selected.length === 1 ? "" : "s"}`;
+      selectionCount.textContent = `${selectedSubjects.length} materia${selectedSubjects.length === 1 ? "" : "s"}`;
       generate.disabled = !selected.length || generation.blockedSubjects.length > 0;
       generate.removeAttribute("title");
       clear.disabled = !selected.length;
@@ -1568,10 +1810,10 @@
       generateHelp.textContent = generate.disabled
         ? diagnostics.state === "blocked"
           ? "Elige una alternativa con lugares para cada materia antes de generar."
-          : "Selecciona al menos un grupo candidato."
+          : "Selecciona al menos una materia."
         : diagnostics.state === "conflict"
         ? "El generador probará tus alternativas para evitar los traslapes señalados."
-        : "Crearemos hasta 30 horarios sin empalmes para que elijas uno.";
+        : `Usaremos ${selected.length} grupo${selected.length === 1 ? "" : "s"} aceptado${selected.length === 1 ? "" : "s"} para crear hasta 30 horarios.`;
       if (plannerStorageError || generationError) generateHelp.dataset.state = "error";
       else delete generateHelp.dataset.state;
       updateWorkflow(diagnostics);
@@ -1717,7 +1959,11 @@
         return;
       }
       generationError = "";
-      generatedSchedules = core.generateScheduleCombinations(generation.offerings, 30);
+      generatedSchedules = core.sortScheduleCombinations(
+        core.generateScheduleCombinations(generation.offerings, 100)
+          .map((schedule, generationIndex) => ({ ...schedule, generationIndex })),
+        scheduleSortCriterion
+      ).slice(0, 30);
       activeGeneratedSchedule = 0;
       if (!generatedSchedules.length) {
         generationError = "Agrega otra alternativa para una de las materias señaladas o quita uno de los grupos que coinciden.";
@@ -1746,9 +1992,7 @@
     refreshOccupancyView = ({ state, message } = {}) => {
       updateOccupancyStatus({ state, message });
       if (state !== "ready" && state !== "disabled") return;
-      generatedSchedules = [];
       generationError = "";
-      activeGeneratedSchedule = 0;
       const searchValue = search.value;
       const listScroll = optionList.scrollTop;
       renderOptions();
