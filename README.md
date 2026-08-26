@@ -181,6 +181,34 @@ const trajectoryKey = `trajectory:${location.origin}`
 
 <a id="instalacion"></a>
 
+## 📥 Instalación para estudiantes
+
+No necesitas saber programar ni instalar Node.js.
+
+### 1. Descargar MI SAES 2.0
+
+1. Entra a la página de [versiones publicadas](https://github.com/LeonardSF/MI-SAES-2.0/releases/latest).
+2. En **Assets**, descarga **Source code (zip)** de la versión más reciente.
+3. Descomprime el archivo en una carpeta que no vayas a borrar ni mover.
+
+### 2. Instalar la extensión en Chrome
+
+1. Escribe `chrome://extensions` en la barra de direcciones y presiona <kbd>Enter</kbd>.
+2. Activa **Modo de desarrollador** en la esquina superior derecha.
+3. Pulsa **Cargar descomprimida**.
+4. Selecciona la carpeta que acabas de descomprimir. Es la carpeta que contiene el archivo `manifest.json`.
+5. Abre o recarga el SAES de tu plantel. Ya podrás usar **MI SAES 2.0**.
+
+> [!TIP]
+> Puedes fijar MI SAES 2.0 desde el botón de extensiones 🧩 de Chrome para tener su acceso rápido siempre visible.
+
+### Actualizar una instalación manual
+
+Descarga y descomprime la nueva versión, reemplaza los archivos de la carpeta anterior y después pulsa **Actualizar** en `chrome://extensions`. Tus preferencias permanecen guardadas en el navegador.
+
+> [!NOTE]
+> Si Chrome muestra **No se pudo cargar el manifiesto**, seleccionaste la carpeta equivocada. Vuelve a **Cargar descomprimida** y elige exactamente la que contiene `manifest.json`.
+
 ## Instalación para desarrollo
 
 ### 1. Obtener el proyecto
