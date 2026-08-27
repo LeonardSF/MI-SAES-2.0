@@ -4,8 +4,10 @@
   const core = globalThis.MISaesCore;
   const trajectory = globalThis.MISaesTrajectory;
   const trajectoryView = globalThis.MISaesTrajectoryView;
+  const curriculum = globalThis.MISaesCurriculum;
+  const curriculumView = globalThis.MISaesCurriculumView;
   const studentHome = globalThis.MISaesStudentHome;
-  if (!core || !trajectory || !trajectoryView || !studentHome || document.getElementById("misaes-root")) return;
+  if (!core || !trajectory || !trajectoryView || !curriculum || !curriculumView || !studentHome || document.getElementById("misaes-root")) return;
 
   const pageText = document.body?.innerText?.slice(0, 16000) || "";
   const normalizedPage = core.normalizeText(`${document.title} ${pageText}`);
@@ -58,8 +60,9 @@
   const occupancyPreferenceKey = `occupancy-enabled:${location.origin}`;
   const occupancyRefreshPreferenceKey = `occupancy-refresh-minutes:${location.origin}`;
   const trajectoryKey = `trajectory:${location.origin}`;
+  const curriculumKey = `curriculum:${location.origin}`;
   const releaseNoticeKey = "releaseNotice";
-  const storedState = await storage.get(["settings", plannerKey, plannerConfigKey, catalogKey, preparedKey, occupancyKey, occupancyPreferenceKey, occupancyRefreshPreferenceKey, trajectoryKey, releaseNoticeKey]);
+  const storedState = await storage.get(["settings", plannerKey, plannerConfigKey, catalogKey, preparedKey, occupancyKey, occupancyPreferenceKey, occupancyRefreshPreferenceKey, trajectoryKey, curriculumKey, releaseNoticeKey]);
   const savedSettings = storedState.settings || {};
   let settings = core.mergeSettings(savedSettings);
   let tableModels = [];
@@ -71,6 +74,11 @@
   let occupancyEnabled = storedState[occupancyPreferenceKey] === true;
   let occupancyRefreshMinutes = core.normalizeOccupancyRefreshMinutes(storedState[occupancyRefreshPreferenceKey]);
   let trajectorySnapshot = storedState[trajectoryKey]?.updatedAt ? storedState[trajectoryKey] : null;
+  let curriculumSnapshot = storedState[curriculumKey]?.updatedAt ? storedState[curriculumKey] : null;
+  let curriculumController = null;
+  let curriculumSchedulePromise = null;
+  let curriculumFilter = "all";
+  let curriculumPeriod = 1;
   let trajectoryActivity = null;
   let trajectoryController = null;
   let trajectoryHomeHost = null;
@@ -136,10 +144,17 @@
           <h1 class="ms-brand__name" id="ms-title">MI SAES 2.0</h1>
           <p class="ms-brand__context"></p>
         </div>
-        <nav class="ms-surface-switch" aria-label="Cambiar entre SAES y MI SAES">
-          <button type="button" data-action="show-saes" aria-pressed="false">SAES</button>
-          <button type="button" data-action="show-misaes" aria-pressed="true">MI SAES</button>
-        </nav>
+        <div class="ms-panel__actions">
+          <a class="ms-github-link" href="https://github.com/LeonardSF/MI-SAES-2.0" target="_blank" rel="noopener noreferrer" aria-label="Abrir repositorio de MI SAES en GitHub">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 .7a11.3 11.3 0 0 0-3.6 22c.6.1.8-.2.8-.6v-2.2c-3.3.7-4-1.4-4-1.4-.5-1.4-1.3-1.8-1.3-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.6-.3-5.4-1.3-5.4-5.6 0-1.2.4-2.2 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.1 1.2a10.7 10.7 0 0 1 5.7 0c2.2-1.5 3.1-1.2 3.1-1.2.6 1.6.2 2.8.1 3.1.8.9 1.2 1.9 1.2 3.1 0 4.3-2.8 5.3-5.4 5.6.4.4.8 1.1.8 2.2v3.3c0 .4.2.7.8.6A11.3 11.3 0 0 0 12 .7Z"/>
+            </svg>
+          </a>
+          <nav class="ms-surface-switch" aria-label="Cambiar entre SAES y MI SAES">
+            <button type="button" data-action="show-saes" aria-pressed="false">SAES</button>
+            <button type="button" data-action="show-misaes" aria-pressed="true">MI SAES</button>
+          </nav>
+        </div>
       </header>
       <aside class="ms-release-banner" aria-labelledby="ms-release-title" hidden>
         <div class="ms-release-banner__copy">
@@ -2201,6 +2216,138 @@
     renderStudentIdTool();
   }
 
+  function currentCurriculumSubjects() {
+    const subjects = [
+      ...(curriculumSnapshot?.currentSubjects || []),
+      ...scheduleEntries.map((entry) => ({ name: String(entry.label || "").split(" · ")[0] }))
+    ].filter((subject) => subject.name || subject.key);
+    return [...new Map(subjects.map((subject) => [core.normalizeText(subject.key || subject.name), subject])).values()];
+  }
+
+  function curriculumMatchesSelection(snapshot) {
+    if (!snapshot) return false;
+    const selectedCareer = core.normalizeText(plannerConfigSelection.careerLabel || visibleCareer);
+    const selectedPlan = core.normalizeText(plannerConfigSelection.planLabel || visiblePlan);
+    return (!selectedCareer || selectedCareer === core.normalizeText(snapshot.career))
+      && (!selectedPlan || selectedPlan === core.normalizeText(snapshot.plan));
+  }
+
+  async function fetchCurrentCurriculumSubjects(signal) {
+    const scheduleResponse = await fetch(new URL("/Alumnos/Informacion_semestral/Horario_Alumno.aspx", location.origin), {
+      credentials: "same-origin",
+      cache: "no-store",
+      signal
+    });
+    if (!scheduleResponse.ok) throw new Error(`SAES respondió con código ${scheduleResponse.status}`);
+    const scheduleDocument = new DOMParser().parseFromString(await scheduleResponse.text(), "text/html");
+    const scheduleText = core.normalizeText(scheduleDocument.body?.textContent || "");
+    if (/iniciar sesion/.test(scheduleText) && /(captcha|password|contrasena)/.test(scheduleText)) throw new Error("La sesión de SAES terminó");
+    return curriculum.parseCurrentSchedule(scheduleDocument);
+  }
+
+  function hydrateLegacyCurriculumSchedule() {
+    if (curriculumSchedulePromise || !hasAuthenticatedSession || !curriculumSnapshot || curriculumSnapshot.currentSubjectsState) return;
+    curriculumSchedulePromise = fetchCurrentCurriculumSubjects()
+      .then(async (currentSubjects) => {
+        curriculumSnapshot = { ...curriculumSnapshot, currentSubjects, currentSubjectsState: "ready" };
+        await storage.set({ [curriculumKey]: curriculumSnapshot });
+      })
+      .catch(() => {
+        curriculumSnapshot = { ...curriculumSnapshot, currentSubjects: curriculumSnapshot.currentSubjects || [], currentSubjectsState: "error" };
+      })
+      .finally(() => {
+        curriculumSchedulePromise = null;
+        if (activeView === "curriculum") renderView();
+      });
+  }
+
+  async function refreshCurriculum() {
+    if (curriculumController || !plannerConfigSelection.careerValue || !plannerConfigSelection.planValue) return;
+    curriculumController = new AbortController();
+    renderView();
+    try {
+      if (!trajectorySnapshot?.kardex?.entries?.length) await refreshTrajectory();
+      let currentSubjects = curriculumSnapshot?.currentSubjects || [];
+      let currentSubjectsState = curriculumSnapshot?.currentSubjectsState || "stale";
+      try {
+        currentSubjects = await fetchCurrentCurriculumSubjects(curriculumController.signal);
+        currentSubjectsState = "ready";
+      } catch (error) {
+        if (error?.name === "AbortError") throw error;
+        currentSubjectsState = currentSubjects.length ? "stale" : "error";
+      }
+      const result = await globalThis.MISaesScanner.scan({
+        rootDocument: isOfferingsCatalog ? document : undefined,
+        url: core.schedulePageUrl(location.origin),
+        core,
+        signal: curriculumController.signal,
+        includeNext: false,
+        careerValue: plannerConfigSelection.careerValue,
+        planValue: plannerConfigSelection.planValue,
+        modeIndex: plannerConfigSelection.modeIndex
+      });
+      curriculumSnapshot = {
+        ...curriculum.curriculumFromOfferings(result.offerings, { updatedAt: result.scannedAt }),
+        career: plannerConfigSelection.careerLabel || result.career,
+        plan: plannerConfigSelection.planLabel || result.plan,
+        currentSubjects,
+        currentSubjectsState
+      };
+      await storage.set({ [curriculumKey]: curriculumSnapshot });
+      announce("Mapa curricular actualizado");
+    } catch (error) {
+      if (error?.name !== "AbortError") {
+        if (curriculumSnapshot) {
+          curriculumSnapshot = {
+            ...curriculumSnapshot,
+            state: "partial",
+            periods: curriculumSnapshot.periods.map((period) => ({ ...period, state: "stale", error: error?.message || "No se pudo actualizar" }))
+          };
+        }
+        announce("No fue posible actualizar el mapa curricular");
+      }
+    } finally {
+      curriculumController = null;
+      if (activeView === "curriculum") renderView();
+    }
+  }
+
+  function renderCurriculum() {
+    const selectedSnapshot = curriculumMatchesSelection(curriculumSnapshot) ? curriculumSnapshot : null;
+    if (selectedSnapshot && !selectedSnapshot.currentSubjectsState) hydrateLegacyCurriculumSchedule();
+    const modeled = selectedSnapshot ? {
+      ...selectedSnapshot,
+      ...curriculum.buildCurriculumModel({
+        periods: selectedSnapshot.periods,
+        kardexRecords: trajectorySnapshot?.kardex?.entries || [],
+        currentSubjects: currentCurriculumSubjects(),
+        career: selectedSnapshot.career || plannerConfigSelection.careerLabel,
+        plan: selectedSnapshot.plan || plannerConfigSelection.planLabel,
+        creditProgress: trajectorySnapshot?.reenrollment || null
+      })
+    } : null;
+    view.append(curriculumView.render(view, {
+      snapshot: modeled,
+      filter: curriculumFilter,
+      activePeriod: curriculumPeriod,
+      loading: Boolean(curriculumController),
+      configurationReady: Boolean(plannerConfigSelection.careerValue && plannerConfigSelection.planValue),
+      onRefresh: refreshCurriculum,
+      onFilter(nextFilter) {
+        curriculumFilter = nextFilter;
+        renderView();
+        view.querySelector(`[data-filter="${nextFilter}"]`)?.focus({ preventScroll: true });
+        announce(`Filtro ${nextFilter === "all" ? "Todas" : nextFilter === "approved" ? "Aprobadas" : nextFilter === "current" ? "Cursando" : nextFilter === "failed" ? "No aprobadas" : "Pendientes"} aplicado`);
+      },
+      onPeriod(nextPeriod) {
+        curriculumPeriod = nextPeriod;
+        renderView();
+        view.querySelector(`[data-period="${nextPeriod}"]`)?.focus({ preventScroll: true });
+        announce(`Periodo ${nextPeriod}`);
+      }
+    }));
+  }
+
   function renderTrajectoryHomeTool() {
     const section = document.createElement("section");
     section.className = "ms-section";
@@ -2505,7 +2652,7 @@
     const navigation = document.createElement("nav");
     navigation.className = "ms-view-nav";
     navigation.setAttribute("aria-label", "Apartados de MI SAES");
-    [["Horario", "schedule"], ["Herramientas", "tools"]].forEach(([label, target]) => {
+    [["Horario", "schedule"], ["Mapa curricular", "curriculum"], ["Herramientas", "tools"]].forEach(([label, target]) => {
       const button = document.createElement("button");
       button.type = "button";
       button.textContent = label;
@@ -2519,6 +2666,7 @@
     });
     view.append(navigation);
     if (activeView === "tools") renderTools();
+    else if (activeView === "curriculum") renderCurriculum();
     else renderSchedule();
   }
 
@@ -2578,6 +2726,11 @@
     if (changes[trajectoryKey]) {
       trajectorySnapshot = changes[trajectoryKey].newValue || trajectorySnapshot;
       renderTrajectoryHomeSnapshot();
+      if (isOpen && activeView === "curriculum") renderView();
+    }
+    if (changes[curriculumKey]) {
+      curriculumSnapshot = changes[curriculumKey].newValue || curriculumSnapshot;
+      if (isOpen && activeView === "curriculum") renderView();
     }
     if (changes.settings) {
       settings = core.mergeSettings(changes.settings.newValue || {});
@@ -2596,6 +2749,7 @@
     clearTimeout(occupancyTimer);
     occupancyController?.abort();
     trajectoryController?.abort();
+    curriculumController?.abort();
     unmountStudentHome();
     unmountTrajectoryHome();
   }, { once: true });

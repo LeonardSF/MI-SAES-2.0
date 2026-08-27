@@ -10,6 +10,26 @@ const execFileAsync = promisify(execFile);
 const root = path.resolve(__dirname, "..");
 const chromePath = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 
+test("integra Mapa curricular en la navegación superior", {
+  skip: !fs.existsSync(chromePath)
+}, async (t) => {
+  const server = http.createServer((request, response) => {
+    const pathname = new URL(request.url, "http://127.0.0.1").pathname;
+    const filePath = path.join(root, pathname);
+    if (!filePath.startsWith(root) || !fs.existsSync(filePath)) return response.writeHead(404).end();
+    response.end(fs.readFileSync(filePath));
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => server.close());
+  const { port } = server.address();
+  const { stdout } = await execFileAsync(chromePath, [
+    "--headless=new", "--disable-gpu", "--no-sandbox", "--disable-extensions", "--disable-background-networking",
+    "--virtual-time-budget=2500", "--dump-dom",
+    `http://127.0.0.1:${port}/tests/fixtures/saes-schedule.html?misaes-preview=1`
+  ], { timeout: 5000, maxBuffer: 5 * 1024 * 1024 });
+  assert.match(stdout, /<output id="navigation-result">ready<\/output>/);
+});
+
 test("en tablas WebForms anidadas enlaza únicamente la columna Profesor", {
   skip: !fs.existsSync(chromePath)
 }, async (t) => {

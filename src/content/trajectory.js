@@ -76,6 +76,7 @@
     let gradesFromSix = 0;
     let gradesBelowSix = 0;
     let withoutNumericGrade = 0;
+    const entries = [];
 
     // Cada semestre puede vivir en su propia tabla y repetir el encabezado del Kárdex.
     for (const rows of tableRowsFrom(document)) {
@@ -84,6 +85,11 @@
       const header = rows[headerIndex];
       const normalizedHeaders = header.map(normalizeText);
       const gradeColumn = normalizedHeaders.findIndex((cell) => cell.includes("calificacion"));
+      const keyColumn = normalizedHeaders.findIndex((cell) => /^(clave|codigo)$/.test(cell));
+      const nameColumn = normalizedHeaders.findIndex((cell) => /(materia|unidad de aprendizaje|asignatura)/.test(cell));
+      const periodColumn = normalizedHeaders.findIndex((cell) => cell.includes("periodo"));
+      const attemptColumn = normalizedHeaders.findIndex((cell) => /(forma|tipo|evaluacion)/.test(cell));
+      const dateColumn = normalizedHeaders.findIndex((cell) => cell.includes("fecha"));
       for (let dataIndex = headerIndex + 1; dataIndex < rows.length; dataIndex += 1) {
         const dataRow = rows[dataIndex];
         if (findHeaderRow([dataRow], ["materia", "calificacion"]) >= 0 || dataRow.length !== header.length) break;
@@ -93,10 +99,18 @@
         if (grade === null) withoutNumericGrade += 1;
         else if (grade >= 6) gradesFromSix += 1;
         else gradesBelowSix += 1;
+        entries.push({
+          key: keyColumn < 0 ? "" : dataRow[keyColumn],
+          name: nameColumn < 0 ? "" : dataRow[nameColumn],
+          period: periodColumn < 0 ? "" : dataRow[periodColumn],
+          attempt: attemptColumn < 0 ? "" : dataRow[attemptColumn],
+          date: dateColumn < 0 ? "" : dataRow[dateColumn],
+          grade
+        });
       }
     }
 
-    return { records, gradesFromSix, gradesBelowSix, withoutNumericGrade };
+    return { records, gradesFromSix, gradesBelowSix, withoutNumericGrade, entries };
   }
 
   function parseGeneralStatus(document) {

@@ -110,6 +110,14 @@ test("permite alternar claramente entre SAES y MI SAES", () => {
   assert.match(script, /\[data-action="show-saes"\][\s\S]*addEventListener\("click",\s*\(\)\s*=>\s*setOpen\(false\)\)/);
 });
 
+test("enlaza el repositorio de GitHub antes del selector de superficie", () => {
+  assert.match(script, /class="ms-panel__actions"[\s\S]*class="ms-github-link"[\s\S]*class="ms-surface-switch"/);
+  assert.match(script, /class="ms-github-link"[^>]*href="https:\/\/github\.com\/LeonardSF\/MI-SAES-2\.0"[^>]*target="_blank"[^>]*rel="noopener noreferrer"[^>]*aria-label="Abrir repositorio de MI SAES en GitHub"/);
+  assert.match(script, /ms-github-link[\s\S]*<svg[^>]*viewBox="0 0 24 24"[^>]*aria-hidden="true"/);
+  assert.match(styles, /\.ms-panel__actions\s*\{[^}]*display:\s*flex;[^}]*align-items:\s*center;/s);
+  assert.match(styles, /\.ms-github-link\s*\{[^}]*width:\s*44px;[^}]*height:\s*44px;/s);
+});
+
 test("usa navegación superior compacta sin fijarla al desplazamiento", () => {
   assert.match(styles, /\.ms-view-nav\s*\{[^}]*display:\s*flex;[^}]*min-height:\s*44px/s);
   assert.doesNotMatch(styles, /\.ms-view-nav\s*\{[^}]*position:\s*sticky/s);

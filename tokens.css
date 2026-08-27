@@ -48,6 +48,8 @@
   --color-focus-contrast: oklch(99% 0.003 350);
   --color-success: oklch(42% 0.105 165);
   --color-success-soft: oklch(96% 0.018 165);
+  --color-info: oklch(45% 0.115 250);
+  --color-info-soft: oklch(96% 0.022 250);
   --color-warning: oklch(48% 0.12 72);
   --color-warning-soft: oklch(96% 0.028 82);
   --color-error: oklch(43% 0.17 25);

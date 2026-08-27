@@ -96,7 +96,12 @@ test("resume el Kárdex sin inventar estados académicos", () => {
     records: 3,
     gradesFromSix: 1,
     gradesBelowSix: 1,
-    withoutNumericGrade: 1
+    withoutNumericGrade: 1,
+    entries: [
+      { key: "C301", name: "CÁLCULO", period: "2025/2", attempt: "ORD", date: "2025-06-10", grade: 8 },
+      { key: "F302", name: "FÍSICA", period: "2025/2", attempt: "ETS", date: "2025-07-01", grade: 5 },
+      { key: "P303", name: "PROGRAMACIÓN", period: "2025/2", attempt: "ORD", date: "", grade: null }
+    ]
   });
 });
 

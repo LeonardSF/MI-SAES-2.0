@@ -12,6 +12,8 @@ const required = [
   "src/content/occupancy.js",
   "src/content/trajectory.js",
   "src/content/trajectory-view.js",
+  "src/content/curriculum.js",
+  "src/content/curriculum-view.js",
   "src/content/student-home.js",
   "src/content/content.js",
   "src/content/content.css",

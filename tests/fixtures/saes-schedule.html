@@ -98,10 +98,40 @@
     <script src="/src/content/occupancy.js"></script>
     <script src="/src/content/trajectory.js"></script>
     <script src="/src/content/trajectory-view.js"></script>
+    <script src="/src/content/curriculum.js"></script>
+    <script src="/src/content/curriculum-view.js"></script>
     <script src="/src/content/student-home.js"></script>
     <script src="/src/content/content.js"></script>
+    <output id="navigation-result"></output>
     <output id="metrics-result"></output>
+    <output id="curriculum-interaction-result"></output>
     <script>
+      setTimeout(() => {
+        const root = document.getElementById("misaes-root")?.shadowRoot;
+        root?.querySelector(".ms-launcher")?.click();
+        setTimeout(() => {
+          const labels = [...(root?.querySelectorAll(".ms-view-nav button") || [])].map((button) => button.textContent);
+          document.getElementById("navigation-result").textContent = labels.join("|") === "Horario|Mapa curricular|Herramientas" ? "ready" : "missing";
+          if (new URLSearchParams(location.search).has("curriculum-preview")) {
+            [...(root?.querySelectorAll(".ms-view-nav button") || [])].find((button) => button.textContent === "Mapa curricular")?.click();
+            root?.querySelector('[aria-label="Ir al periodo 2"]')?.click();
+            if (new URLSearchParams(location.search).has("curriculum-interaction")) {
+              const period = root?.querySelector('[aria-label="Ir al periodo 3"]');
+              period?.focus();
+              period?.click();
+              setTimeout(() => {
+                const focused = root?.activeElement?.getAttribute("aria-label");
+                const active = root?.querySelector('.ms-curriculum-navigator__period[aria-current="true"]')?.textContent;
+                const filters = [...(root?.querySelectorAll(".ms-curriculum-filter__label") || [])].map((node) => node.textContent).join("|");
+                const ready = focused === "Ir al periodo 3" && active === "3" && filters.includes("No aprobadas");
+                document.getElementById("curriculum-interaction-result").textContent = ready
+                  ? "ready"
+                  : `missing:${focused || "sin-foco"}|${active || "sin-periodo"}|${filters || "sin-filtros"}`;
+              }, 100);
+            }
+          }
+        }, 100);
+      }, 300);
       if (new URLSearchParams(location.search).has("metrics-preview")) {
         setTimeout(async () => {
           const root = document.getElementById("misaes-root")?.shadowRoot;
