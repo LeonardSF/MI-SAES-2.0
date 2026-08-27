@@ -180,6 +180,19 @@ textarea {
   color: var(--color-neutral);
 }
 
+.ms-curriculum__actions {
+  display: grid;
+  flex: 0 0 auto;
+  gap: var(--space-2xs);
+  justify-items: end;
+}
+
+.ms-curriculum__updated {
+  color: var(--color-neutral);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
 .ms-curriculum-overview {
   display: grid;
   grid-template-columns: minmax(220px, 0.6fr) minmax(600px, 1.4fr);
@@ -639,6 +652,15 @@ textarea {
 
   .ms-curriculum__header .ms-button {
     width: 100%;
+  }
+
+  .ms-curriculum__actions {
+    justify-items: stretch;
+  }
+
+  .ms-curriculum__updated {
+    text-align: center;
+    white-space: normal;
   }
 
   .ms-curriculum-elective__heading { align-items: stretch; flex-direction: column; }

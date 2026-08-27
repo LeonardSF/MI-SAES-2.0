@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <title>Mapa curricular</title>
+  </head>
+  <body>
+    <main id="fixture"></main>
+    <output id="result"></output>
+    <script src="/src/content/curriculum-view.js"></script>
+    <script>
+      const fixture = document.getElementById("fixture");
+      fixture.append(MISaesCurriculumView.render(fixture, {
+        configurationReady: true,
+        snapshot: {
+          updatedAt: "2026-08-26T20:00:00.000Z",
+          periods: [],
+          summary: { subjects: 0, approved: 0 }
+        }
+      }));
+      const freshness = fixture.querySelector(".ms-curriculum__updated");
+      document.getElementById("result").textContent = freshness?.tagName === "TIME"
+        && freshness.dateTime === "2026-08-26T20:00:00.000Z"
+        && freshness.textContent.startsWith("Actualizado ")
+        ? "ready"
+        : "missing";
+    </script>
+  </body>
+</html>

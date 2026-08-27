@@ -21,6 +21,15 @@ test("detecta las secciones principales de SAES", () => {
   }), "schedule");
 });
 
+test("no confunde el menú lateral con la sección actual en Inicio", () => {
+  assert.equal(core.detectContext({
+    url: "https://www.saes.esimecu.ipn.mx/alumnos/default.aspx",
+    title: "Menú principal de alumnos",
+    text: "Datos académicos Evaluacion Profesor Evaluación Reinscripciones",
+    authenticated: true
+  }), "general");
+});
+
 test("adapta la invitación de acceso al estado de la sesión", () => {
   assert.deepEqual(core.launcherModel({ authenticated: false }), {
     title: "MI SAES 2.0",

@@ -306,6 +306,7 @@
     if (/\/academica\/ocupabilidad_grupos\.aspx/.test(normalizedUrl)) return "occupancy";
     if (/\/alumnos\/reinscripciones\//.test(normalizedUrl)) return "reenrollment";
     if (/(evaluacion[_-]*docente|evaluacion[_-]*profesor)/.test(normalizedUrl)) return "evaluation";
+    if (/\/alumnos\/default\.aspx(?:$|[?#])/.test(normalizedUrl)) return "general";
     if (/(evaluacion[_\s-]*docente|evaluacion[_\s-]*profesor)/.test(haystack)) return "evaluation";
     if (/(reinscripcion|reinscripciones|cita de reinscripcion)/.test(haystack)) return "reenrollment";
     if (/(ocupabilidad|cupo[s]?\b|lugares disponibles)/.test(haystack)) return "occupancy";

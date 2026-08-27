@@ -109,6 +109,14 @@
     return node;
   }
 
+  function updatedTime(document, value) {
+    const date = new Date(value || "");
+    if (!Number.isFinite(date.getTime())) return null;
+    const node = element(document, "time", "ms-curriculum__updated", `Actualizado ${date.toLocaleString("es-MX", { dateStyle: "medium", timeStyle: "short" })}`);
+    node.dateTime = date.toISOString();
+    return node;
+  }
+
   function arrowIcon(document, direction) {
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.setAttribute("viewBox", "0 0 20 20");
@@ -196,7 +204,11 @@
     refresh.type = "button";
     refresh.disabled = loading || !configurationReady;
     refresh.addEventListener("click", onRefresh);
-    header.append(copy, refresh);
+    const actions = element(document, "div", "ms-curriculum__actions");
+    actions.append(refresh);
+    const freshness = updatedTime(document, snapshot?.updatedAt);
+    if (freshness) actions.append(freshness);
+    header.append(copy, actions);
     section.append(header);
 
     if (!configurationReady) {
