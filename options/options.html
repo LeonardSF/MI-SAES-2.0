@@ -16,11 +16,12 @@
             <p class="subtitle">Configuración local</p>
           </div>
         </div>
-        <a class="header-link" href="https://www.ipn.mx/" target="_blank" rel="noreferrer">Sitio del IPN ↗</a>
+        <a class="header-link" href="https://www.ipn.mx/" target="_blank" rel="noopener noreferrer">Sitio del IPN ↗</a>
       </header>
 
       <main class="workbench">
         <nav class="side-rail" aria-label="Secciones de configuración">
+          <a href="#project">Proyecto</a>
           <a href="#privacy">Privacidad</a>
           <a href="#shortcuts">Atajos</a>
         </nav>
@@ -29,6 +30,40 @@
           <section class="intro">
             <h1>Arma tu Horario.</h1>
             <p>Escanea la oferta de tu carrera, compara grupos y guarda una propuesta antes de tu reinscripción.</p>
+          </section>
+
+          <section class="settings-section project-section" id="project">
+            <div class="section-heading">
+              <div>
+                <h2>Acerca del proyecto</h2>
+                <p>Una herramienta independiente y de código abierto hecha para que el alumnado aproveche mejor el SAES.</p>
+              </div>
+            </div>
+
+            <div class="project-overview">
+              <div class="project-identity">
+                <img src="../assets/icon-128.png" alt="Icono de MI SAES 2.0" width="80" height="80">
+                <div>
+                  <h3>MI SAES 2.0</h3>
+                  <p>Amplía las páginas del SAES con herramientas locales para consultar, comparar y preparar información académica sin entregar el control de las decisiones importantes.</p>
+                  <p class="creator-line">Creado y mantenido por <a href="https://www.facebook.com/Le0nardSF" target="_blank" rel="noopener noreferrer">LeonardSF</a>.</p>
+                </div>
+              </div>
+
+              <dl class="project-facts">
+                <div><dt>Versión instalada</dt><dd id="installed-version">—</dd></div>
+                <div><dt>Tecnología</dt><dd>JavaScript, HTML y CSS nativos</dd></div>
+                <div><dt>Funcionamiento</dt><dd>Local, sin código remoto</dd></div>
+              </dl>
+            </div>
+
+            <div class="project-links" aria-label="Enlaces del proyecto">
+              <a class="project-link project-link--primary" href="https://github.com/LeonardSF/MI-SAES-2.0" target="_blank" rel="noopener noreferrer">Ver repositorio</a>
+              <a class="project-link" href="https://github.com/LeonardSF/MI-SAES-2.0/issues" target="_blank" rel="noopener noreferrer">Reportar un problema</a>
+              <a class="project-link" href="https://github.com/LeonardSF/MI-SAES-2.0/releases" target="_blank" rel="noopener noreferrer">Consultar versiones</a>
+            </div>
+
+            <p class="independence-note"><strong>Proyecto independiente.</strong> MI SAES 2.0 no está afiliado, respaldado ni administrado oficialmente por el IPN.</p>
           </section>
 
           <section class="settings-section privacy-section" id="privacy">
@@ -44,7 +79,7 @@
               <div><dt>Catálogo y horario preparado</dt><dd>Se almacenan sólo en <code>chrome.storage.local</code>.</dd></div>
               <div><dt>Permisos</dt><dd>Almacenamiento local y ejecución declarada en páginas IPN.</dd></div>
             </dl>
-            <a class="outline-link" href="../PRIVACY.md" target="_blank">Leer política completa</a>
+            <a class="outline-link" href="../PRIVACY.md" target="_blank" rel="noopener noreferrer">Leer política completa</a>
           </section>
 
           <section class="settings-section" id="shortcuts">
@@ -60,10 +95,10 @@
       </main>
 
       <footer class="options-footer">
-        <span>MI SAES 2.0 · versión 0.13.0</span>
-        <span>No afiliado oficialmente al IPN.</span>
+        <span>MI SAES 2.0 · Hecho para estudiantes del IPN.</span>
+        <span>Proyecto independiente y de código abierto.</span>
       </footer>
-      <p class="save-status" id="save-status" aria-live="polite">Preferencias cargadas.</p>
+      <p class="save-status" id="save-status" aria-live="polite" hidden></p>
     </div>
     <script src="../src/shared/core.js"></script>
     <script src="options.js"></script>

@@ -1,6 +1,11 @@
 (async function initOptions() {
   "use strict";
 
+  const installedVersion = document.getElementById("installed-version");
+  if (installedVersion && globalThis.chrome?.runtime?.getManifest) {
+    installedVersion.textContent = chrome.runtime.getManifest().version;
+  }
+
   if (!globalThis.chrome?.storage?.local) return;
 
   const core = globalThis.MISaesCore;
@@ -9,6 +14,7 @@
   const status = document.getElementById("save-status");
   const moduleInputs = [...document.querySelectorAll("[data-module]")];
   let statusTimer = 0;
+  status.hidden = true;
 
   function render() {
     document.documentElement.dataset.theme = "light";
@@ -19,6 +25,7 @@
 
   async function save() {
     clearTimeout(statusTimer);
+    status.hidden = false;
     status.dataset.state = "loading";
     status.textContent = "Guardando…";
     try {
@@ -27,7 +34,7 @@
       status.textContent = "Preferencias guardadas ✓";
       statusTimer = setTimeout(() => {
         delete status.dataset.state;
-        status.textContent = "Cambios locales";
+        status.hidden = true;
       }, 2500);
     } catch {
       status.dataset.state = "error";
