@@ -629,6 +629,41 @@ test("ignora páginas que no contienen la boleta de sesión", () => {
   assert.equal(core.applyStudentIdPrivacy({ querySelector: () => null }, true), false);
 });
 
+test("agrega MI SAES 2.0 una sola vez debajo del título de la escuela", () => {
+  const appended = [];
+  const banner = {
+    querySelector(selector) {
+      return selector === "[data-misaes-banner-brand]"
+        ? appended.find((node) => node.dataset?.misaesBannerBrand === "true") || null
+        : null;
+    },
+    append(...nodes) {
+      appended.push(...nodes);
+    },
+    ownerDocument: {
+      createElement(tagName) {
+        return { tagName: tagName.toUpperCase(), dataset: {}, textContent: "" };
+      }
+    }
+  };
+  const root = {
+    querySelector(selector) {
+      return selector === "#banner" ? banner : null;
+    }
+  };
+
+  assert.equal(core.applyBannerBranding(root), true);
+  assert.equal(core.applyBannerBranding(root), true);
+  assert.equal(appended.length, 2);
+  assert.equal(appended[0].tagName, "BR");
+  assert.equal(appended[1].textContent, "MI SAES 2.0");
+  assert.equal(appended[1].dataset.misaesBannerBrand, "true");
+});
+
+test("ignora páginas que no contienen el banner de la escuela", () => {
+  assert.equal(core.applyBannerBranding({ querySelector: () => null }), false);
+});
+
 test("el escáner ignora opciones vacías y conserva periodos y turnos reales", () => {
   const options = scanner.usefulOptions({
     options: [

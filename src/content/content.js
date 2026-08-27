@@ -107,6 +107,7 @@
   const isReenrollmentPage = /\/alumnos\/reinscripciones\//i.test(location.pathname) || context === "reenrollment";
   const extensionVersion = chrome.runtime.getManifest?.().version || "0.13.0";
   const launcherCopy = core.launcherModel({ authenticated: hasAuthenticatedSession });
+  core.applyBannerBranding(document);
   let releaseNotice = storedState[releaseNoticeKey] || null;
   let isOpen = false;
   let activeView = "schedule";

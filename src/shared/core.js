@@ -156,6 +156,20 @@
     return true;
   }
 
+  function applyBannerBranding(root) {
+    const banner = root?.querySelector?.("#banner");
+    if (!banner) return false;
+    if (banner.querySelector?.("[data-misaes-banner-brand]")) return true;
+
+    const documentRef = banner.ownerDocument || root;
+    const lineBreak = documentRef.createElement("br");
+    const brand = documentRef.createElement("span");
+    brand.dataset.misaesBannerBrand = "true";
+    brand.textContent = "MI SAES 2.0";
+    banner.append(lineBreak, brand);
+    return true;
+  }
+
   function normalizeOccupancyRefreshMinutes(value) {
     const minutes = Number(value);
     return OCCUPANCY_REFRESH_MINUTES.includes(minutes) ? minutes : 2;
@@ -753,6 +767,7 @@
     launcherModel,
     normalizeOccupancyRefreshMinutes,
     applyStudentIdPrivacy,
+    applyBannerBranding,
     misProfesoresSearchUrl,
     schedulePageUrl,
     scheduleCatalogMatches,
