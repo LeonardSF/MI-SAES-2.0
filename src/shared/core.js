@@ -161,6 +161,11 @@
     if (!banner) return false;
     if (banner.querySelector?.("[data-misaes-banner-brand]")) return true;
 
+    const firstContentNode = Array.from(banner.childNodes || []).find(
+      (node) => node.nodeType !== 3 || String(node.textContent || "").trim()
+    );
+    if (firstContentNode?.nodeName === "BR") banner.removeChild(firstContentNode);
+
     const documentRef = banner.ownerDocument || root;
     const lineBreak = documentRef.createElement("br");
     const brand = documentRef.createElement("span");

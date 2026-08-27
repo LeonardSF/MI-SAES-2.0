@@ -631,7 +631,9 @@ test("ignora páginas que no contienen la boleta de sesión", () => {
 
 test("agrega MI SAES 2.0 una sola vez debajo del título de la escuela", () => {
   const appended = [];
+  const leadingBreak = { tagName: "BR", nodeName: "BR", nodeType: 1 };
   const banner = {
+    childNodes: [{ nodeType: 3, textContent: "\n\t" }, leadingBreak],
     querySelector(selector) {
       return selector === "[data-misaes-banner-brand]"
         ? appended.find((node) => node.dataset?.misaesBannerBrand === "true") || null
@@ -639,6 +641,9 @@ test("agrega MI SAES 2.0 una sola vez debajo del título de la escuela", () => {
     },
     append(...nodes) {
       appended.push(...nodes);
+    },
+    removeChild(node) {
+      this.childNodes = this.childNodes.filter((child) => child !== node);
     },
     ownerDocument: {
       createElement(tagName) {
@@ -658,6 +663,7 @@ test("agrega MI SAES 2.0 una sola vez debajo del título de la escuela", () => {
   assert.equal(appended[0].tagName, "BR");
   assert.equal(appended[1].textContent, "MI SAES 2.0");
   assert.equal(appended[1].dataset.misaesBannerBrand, "true");
+  assert.equal(banner.childNodes.includes(leadingBreak), false);
 });
 
 test("ignora páginas que no contienen el banner de la escuela", () => {
