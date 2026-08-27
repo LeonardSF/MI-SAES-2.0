@@ -185,22 +185,35 @@ const trajectoryKey = `trajectory:${location.origin}`
 
 No necesitas saber programar ni instalar Node.js.
 
-### 1. Descargar MI SAES 2.0
+### Instalar desde Chrome Web Store
+
+1. Abre la ficha oficial de [MI SAES 2.0 en Chrome Web Store](https://chromewebstore.google.com/detail/mi-saes-20/hflcfnffkbdeeneoffpnbalnefhgdbig).
+2. Pulsa **Agregar a Chrome**.
+3. Confirma con **Agregar extensión**.
+4. Abre o recarga el SAES de tu plantel. Ya podrás usar **MI SAES 2.0**.
+
+Chrome instalará automáticamente las actualizaciones publicadas.
+
+> [!TIP]
+> Puedes fijar MI SAES 2.0 desde el botón de extensiones 🧩 de Chrome para tener su acceso rápido siempre visible.
+
+### Instalación manual
+
+Usa este método sólo si necesitas probar una versión descargada desde GitHub.
+
+#### 1. Descargar MI SAES 2.0
 
 1. Entra a la página de [versiones publicadas](https://github.com/LeonardSF/MI-SAES-2.0/releases/latest).
 2. En **Assets**, descarga **Source code (zip)** de la versión más reciente.
 3. Descomprime el archivo en una carpeta que no vayas a borrar ni mover.
 
-### 2. Instalar la extensión en Chrome
+#### 2. Instalar la extensión en Chrome
 
 1. Escribe `chrome://extensions` en la barra de direcciones y presiona <kbd>Enter</kbd>.
 2. Activa **Modo de desarrollador** en la esquina superior derecha.
 3. Pulsa **Cargar descomprimida**.
 4. Selecciona la carpeta que acabas de descomprimir. Es la carpeta que contiene el archivo `manifest.json`.
 5. Abre o recarga el SAES de tu plantel. Ya podrás usar **MI SAES 2.0**.
-
-> [!TIP]
-> Puedes fijar MI SAES 2.0 desde el botón de extensiones 🧩 de Chrome para tener su acceso rápido siempre visible.
 
 ### Actualizar una instalación manual
 
