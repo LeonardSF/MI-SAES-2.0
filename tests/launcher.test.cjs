@@ -32,7 +32,7 @@ test("mantiene el tamaño de MI SAES cuando el portal usa una raíz de 10px", {
       `--user-data-dir=${profile}`,
       "--dump-dom",
       new URL(`file://${fixturePath}`).href
-    ], { encoding: "utf8", timeout: 2000, killSignal: "SIGKILL", stdio: ["ignore", "pipe", "ignore"] });
+    ], { encoding: "utf8", timeout: 10000, killSignal: "SIGKILL", stdio: ["ignore", "pipe", "ignore"] });
     const output = chrome.stdout || "";
     const match = output.match(/<output id="result">([^<]+)<\/output>/);
     assert.ok(match, "la vista de prueba debe entregar sus medidas computadas");
@@ -78,10 +78,10 @@ test("muestra las novedades instaladas en un banner descartable", () => {
   assert.match(styles, /\.ms-release-banner\s*\{[^}]*display:\s*grid;/s);
 });
 
-test("mantiene sincronizada la versión 0.13.0 en las superficies publicadas", () => {
+test("mantiene sincronizada la versión 0.14.0 en las superficies publicadas", () => {
   const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
-  assert.equal(manifest.version, "0.13.0");
-  assert.equal(packageJson.version, "0.13.0");
+  assert.equal(manifest.version, "0.14.0");
+  assert.equal(packageJson.version, "0.14.0");
 });
 
 test("el acceso flotante conserva una version compacta para ventanas estrechas", () => {

@@ -2,7 +2,7 @@
  * THESIS: convertir el mapa en un visor académico, no en una tabla panorámica.
  * OWN-WORLD: mesa de trabajo clara de MI SAES, guinda para selección y estados académicos explícitos.
  * STORY: avance general → estado → periodo → materias del periodo activo.
- * FIRST VIEWPORT: avance, filtros cuantificados, periodos 1–8 y un único semestre protagonista.
+ * FIRST VIEWPORT: avance, filtros cuantificados, todos los periodos disponibles y un único semestre protagonista.
  * FORM: Focused Workbench, code-led, surface seed a9b879bd.
  */
 (function initMiSaesCurriculumView(globalScope) {
@@ -216,7 +216,7 @@
       return section;
     }
     if (!snapshot) {
-      section.append(element(document, "section", "ms-empty", "Aún no hay una lectura curricular. Pulsa “Actualizar mapa” para consultar los ocho periodos."));
+      section.append(element(document, "section", "ms-empty", "Aún no hay una lectura curricular. Pulsa “Actualizar mapa” para consultar los periodos disponibles del plan."));
       return section;
     }
 

@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Horario del alumno</title>
+    <link rel="stylesheet" href="/src/content/page.css">
+    <style>
+      .BotonGuinda {
+        display: inline-block;
+        padding: 4px 10px;
+        border: 1px solid #5c0737;
+        border-radius: 4px;
+        background: #750946;
+        color: #fff;
+        font: 12px/16px Arial, sans-serif;
+        text-decoration: none;
+        vertical-align: middle;
+      }
+    </style>
+  </head>
+  <body>
+    <header id="header"><div id="banner">ESIME CULHUACÁN</div></header>
+    <span id="ctl00_leftColumn_LoginNameSession">2026000000</span>
+    <main>
+      <p id="schedule-actions">
+        <a href="/Alumnos/default.aspx" class="BotonGuinda negro chicomediano redondeado"><font color="white">&lt;&lt;&lt; Regresar</font></a>
+      </p>
+      <div>
+        <table id="ctl00_mainCopy_GV_Horario">
+          <tbody>
+            <tr>
+              <th>Grupo</th><th>Materia</th><th>Profesores</th><th>Lunes</th><th>Martes</th><th>Miércoles</th><th>Jueves</th><th>Viernes</th>
+            </tr>
+            <tr>
+              <td>6CM21</td><td>C634 - MODULACIÓN DIGITAL</td><td>CLARA CRUZ RAMOS</td><td>08:30 - 10:00</td><td>08:30 - 10:00</td><td>10:00 - 11:30</td><td>11:30 - 13:00</td><td></td>
+            </tr>
+            <tr>
+              <td>6CV13</td><td>C635 - SISTEMAS OPERATIVOS</td><td>RICARDO I. CALZADA SALAS</td><td>17:30 - 19:00</td><td>16:00 - 17:30</td><td>19:00 - 20:30</td><td>16:00 - 17:30</td><td></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+    <script src="/tests/fixtures/chrome-mock.js"></script>
+    <script src="/src/shared/core.js"></script>
+    <script src="/src/content/scanner.js"></script>
+    <script src="/src/content/occupancy.js"></script>
+    <script src="/src/content/trajectory.js"></script>
+    <script src="/src/content/trajectory-view.js"></script>
+    <script src="/src/content/curriculum.js"></script>
+    <script src="/src/content/curriculum-view.js"></script>
+    <script src="/src/content/student-home.js"></script>
+    <script src="/src/content/content.js"></script>
+    <output id="import-style-result"></output>
+    <script>
+      setTimeout(() => {
+        const back = document.querySelector('a[href="/Alumnos/default.aspx"]');
+        const imported = document.querySelector('[data-misaes-import-schedule="true"]');
+        if (!back || !imported) return;
+        const backStyle = getComputedStyle(back);
+        const importedStyle = getComputedStyle(imported);
+        document.getElementById("import-style-result").textContent = JSON.stringify({
+          back: {
+            height: back.getBoundingClientRect().height,
+            paddingBlock: `${backStyle.paddingTop}|${backStyle.paddingBottom}`,
+            fontSize: backStyle.fontSize,
+            lineHeight: backStyle.lineHeight,
+          },
+          imported: {
+            height: imported.getBoundingClientRect().height,
+            paddingBlock: `${importedStyle.paddingTop}|${importedStyle.paddingBottom}`,
+            fontSize: importedStyle.fontSize,
+            lineHeight: importedStyle.lineHeight,
+            backgroundColor: importedStyle.backgroundColor,
+          },
+        });
+      }, 200);
+    </script>
+  </body>
+</html>

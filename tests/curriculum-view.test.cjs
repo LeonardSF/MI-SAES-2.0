@@ -63,17 +63,18 @@ test("usa el avance oficial por créditos y deja las materias como desglose", ()
   assert.equal(model.subjectDetail, "33 de 48 materias aprobadas · 4 cursando");
 });
 
-test("conserva los ocho periodos al filtrar y vacía sólo los que no coinciden", () => {
+test("conserva todos los periodos al filtrar y vacía sólo los que no coinciden", () => {
   const periods = [
     { period: 1, subjects: [{ state: "approved" }, { state: "pending" }] },
-    { period: 2, subjects: [{ state: "pending" }] }
+    { period: 2, subjects: [{ state: "pending" }] },
+    { period: 9, subjects: [{ state: "current" }] }
   ];
 
-  assert.deepEqual(view.buildPeriodPanels(periods, "approved").map((period) => period.subjects.length), [1, 0]);
+  assert.deepEqual(view.buildPeriodPanels(periods, "approved").map((period) => period.subjects.length), [1, 0, 0]);
 });
 
 test("limita la navegación anterior y siguiente a los periodos disponibles", () => {
-  assert.equal(view.nextPeriodIndex(0, -1, 8), 0);
-  assert.equal(view.nextPeriodIndex(3, 1, 8), 4);
-  assert.equal(view.nextPeriodIndex(7, 1, 8), 7);
+  assert.equal(view.nextPeriodIndex(0, -1, 9), 0);
+  assert.equal(view.nextPeriodIndex(3, 1, 9), 4);
+  assert.equal(view.nextPeriodIndex(8, 1, 9), 8);
 });

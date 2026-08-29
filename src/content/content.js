@@ -104,8 +104,10 @@
   let showCalendarAvailability = false;
   const scheduleSortCriterion = "balanced";
   const isOfferingsCatalog = /\/academica\/horarios\.aspx$/i.test(location.pathname) || (isLocalPreview && /\/saes-schedule\.html$/i.test(location.pathname));
+  const isStudentSchedulePage = /\/alumnos\/informacion_semestral\/horario_alumno\.aspx$/i.test(location.pathname)
+    || (isLocalPreview && /\/saes-student-schedule\.html$/i.test(location.pathname));
   const isReenrollmentPage = /\/alumnos\/reinscripciones\//i.test(location.pathname) || context === "reenrollment";
-  const extensionVersion = chrome.runtime.getManifest?.().version || "0.13.0";
+  const extensionVersion = chrome.runtime.getManifest?.().version || "0.14.0";
   const launcherCopy = core.launcherModel({ authenticated: hasAuthenticatedSession });
   core.applyBannerBranding(document);
   let releaseNotice = storedState[releaseNoticeKey] || null;
@@ -253,6 +255,25 @@
     });
     courseOfferings = scanCatalog?.offerings?.length && catalogMatchesPage ? scanCatalog.offerings : visibleOfferings;
     conflicts = isOfferingsCatalog ? [] : core.findScheduleConflicts(scheduleEntries);
+    mountMiHorarioImportLink();
+  }
+
+  function mountMiHorarioImportLink() {
+    if (!isStudentSchedulePage || document.querySelector("[data-misaes-import-schedule]")) return;
+    const returnLink = [...document.querySelectorAll('a[href="/Alumnos/default.aspx"], a[href="/alumnos/default.aspx"]')]
+      .find((link) => /regresar/i.test(link.textContent || ""));
+    const payload = core.parseStudentScheduleImport(tableModels);
+    if (!returnLink || !payload) return;
+
+    const importLink = document.createElement("a");
+    importLink.href = core.buildMiHorarioImportUrl(payload);
+    importLink.target = "_blank";
+    importLink.rel = "noopener noreferrer";
+    importLink.className = "BotonGuinda negro chicomediano redondeado";
+    importLink.dataset.misaesImportSchedule = "true";
+    importLink.textContent = "Abrir en Mi Horario";
+    importLink.setAttribute("aria-label", `Abrir ${payload.classes.length} materias en Mi Horario`);
+    returnLink.insertAdjacentElement("afterend", importLink);
   }
 
   function linkTeacherColumns() {
@@ -2288,7 +2309,10 @@
         modeIndex: plannerConfigSelection.modeIndex
       });
       curriculumSnapshot = {
-        ...curriculum.curriculumFromOfferings(result.offerings, { updatedAt: result.scannedAt }),
+        ...curriculum.curriculumFromOfferings(result.offerings, {
+          updatedAt: result.scannedAt,
+          periodNumbers: result.periodNumbers
+        }),
         career: plannerConfigSelection.careerLabel || result.career,
         plan: plannerConfigSelection.planLabel || result.plan,
         currentSubjects,

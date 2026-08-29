@@ -4,7 +4,7 @@ const localState = {};
 const changeListeners = [];
 
 if (new URLSearchParams(location.search).has("release-preview")) {
-  localState.releaseNotice = { version: "0.13.0", previousVersion: "0.12.4" };
+  localState.releaseNotice = { version: "0.14.0", previousVersion: "0.13.0" };
 }
 
 if (new URLSearchParams(location.search).has("curriculum-preview")) {
@@ -30,7 +30,7 @@ if (new URLSearchParams(location.search).has("curriculum-preview")) {
     updatedAt,
     career: "INGENIERÍA EN COMPUTACIÓN",
     plan: "Plan del 1/1/2004",
-    periods: Array.from({ length: 8 }, (_, index) => ({
+    periods: Array.from({ length: 9 }, (_, index) => ({
       period: index + 1,
       state: index === 3 ? "stale" : "ready",
       updatedAt,
@@ -74,7 +74,7 @@ globalThis.chrome = {
   },
   runtime: {
     getManifest() {
-      return { version: "0.13.0" };
+      return { version: "0.14.0" };
     },
     getURL(resource) {
       return `/${resource}`;

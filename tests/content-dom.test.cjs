@@ -10,6 +10,11 @@ const execFileAsync = promisify(execFile);
 const root = path.resolve(__dirname, "..");
 const chromePath = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 
+test("propaga al mapa todos los periodos detectados por el escáner", () => {
+  const source = fs.readFileSync(path.join(root, "src/content/content.js"), "utf8");
+  assert.match(source, /curriculumFromOfferings\(result\.offerings,\s*\{[^}]*periodNumbers:\s*result\.periodNumbers/s);
+});
+
 test("integra Mapa curricular en la navegación superior", {
   skip: !fs.existsSync(chromePath)
 }, async (t) => {
@@ -47,6 +52,25 @@ test("muestra la fecha de actualización del mapa como tiempo semántico", {
     "--dump-dom", `http://127.0.0.1:${port}/tests/fixtures/curriculum-view.html`
   ], { timeout: 5000, maxBuffer: 5 * 1024 * 1024 });
   assert.match(stdout, /<output id="result">ready<\/output>/);
+});
+
+test("organiza Mi trayectoria como un resumen académico protagonista", {
+  skip: !fs.existsSync(chromePath)
+}, async (t) => {
+  const server = http.createServer((request, response) => {
+    const pathname = new URL(request.url, "http://127.0.0.1").pathname;
+    const filePath = path.join(root, pathname);
+    if (!filePath.startsWith(root) || !fs.existsSync(filePath)) return response.writeHead(404).end();
+    response.end(fs.readFileSync(filePath));
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => server.close());
+  const { port } = server.address();
+  const { stdout } = await execFileAsync(chromePath, [
+    "--headless=new", "--disable-gpu", "--no-sandbox", "--disable-extensions", "--disable-background-networking",
+    "--dump-dom", `http://127.0.0.1:${port}/tests/fixtures/trajectory-home-preview.html`
+  ], { timeout: 5000, maxBuffer: 5 * 1024 * 1024 });
+  assert.match(stdout, /<output id="trajectory-layout-result" hidden="">ready<\/output>/);
 });
 
 test("en tablas WebForms anidadas enlaza únicamente la columna Profesor", {

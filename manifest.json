@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "MI SAES 2.0",
   "short_name": "MI SAES",
-  "version": "0.13.0",
+  "version": "0.14.0",
   "description": "Herramientas para mejorar tu experiencia en SAES IPN.",
   "permissions": ["storage"],
   "host_permissions": ["*://*.ipn.mx/*"],

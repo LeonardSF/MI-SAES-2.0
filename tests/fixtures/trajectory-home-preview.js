@@ -48,3 +48,14 @@ globalThis.MISaesTrajectoryView.render(view, {
     sources: { reenrollment: "ready", status: "ready", kardex: "ready" }
   }
 });
+
+const header = view.querySelector(".ms-trajectory-home__header");
+const hero = view.querySelector(".ms-trajectory-home__hero");
+const freshness = header?.querySelector("time");
+document.getElementById("trajectory-layout-result").textContent = header?.querySelector(".ms-heading")
+  && header.querySelector(".ms-button--primary")
+  && hero?.querySelector(".ms-trajectory-progress")
+  && hero.querySelector(".ms-trajectory-metrics")
+  && freshness?.dateTime === "2026-08-26T03:00:00.000Z"
+  ? "ready"
+  : "missing";

@@ -26,3 +26,23 @@ a[data-misaes-teacher-link]:hover,
 a[data-misaes-teacher-link]:focus-visible {
   color: #750946;
 }
+
+a[data-misaes-import-schedule="true"] {
+  margin-inline-start: 0.625rem;
+  border-color: #2563eb !important;
+  background: #3b82f6 !important;
+  box-shadow: 0 0.125rem 0.35rem rgba(37, 99, 235, 0.22);
+  color: #fff !important;
+  text-decoration: none !important;
+  white-space: nowrap;
+}
+
+a[data-misaes-import-schedule="true"]:hover {
+  border-color: #1d4ed8 !important;
+  background: #2563eb !important;
+}
+
+a[data-misaes-import-schedule="true"]:focus-visible {
+  outline: 3px solid #f4b942;
+  outline-offset: 2px;
+}

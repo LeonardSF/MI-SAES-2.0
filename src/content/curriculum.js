@@ -324,10 +324,22 @@
     return [...subjects.values()];
   }
 
-  function curriculumFromOfferings(offerings = [], { updatedAt = new Date().toISOString() } = {}) {
-    const buckets = new Map(Array.from({ length: 8 }, (_, index) => [index + 1, new Map()]));
+  function curriculumPeriodNumber(value) {
+    const number = Number(String(value ?? "").match(/\d+/u)?.[0]);
+    return Number.isInteger(number) && number > 0 ? number : null;
+  }
+
+  function curriculumPeriodNumbers(offerings = [], detected = []) {
+    const explicit = detected.map(curriculumPeriodNumber).filter(Boolean);
+    const baseline = explicit.length ? explicit : Array.from({ length: 8 }, (_, index) => index + 1);
+    const observed = offerings.map((offering) => curriculumPeriodNumber(offering?.source?.period)).filter(Boolean);
+    return [...new Set([...baseline, ...observed])].sort((left, right) => left - right);
+  }
+
+  function curriculumFromOfferings(offerings = [], { updatedAt = new Date().toISOString(), periodNumbers = [] } = {}) {
+    const buckets = new Map(curriculumPeriodNumbers(offerings, periodNumbers).map((period) => [period, new Map()]));
     offerings.forEach((offering) => {
-      const period = Number(String(offering?.source?.period || "").match(/\d+/)?.[0]);
+      const period = curriculumPeriodNumber(offering?.source?.period);
       if (!buckets.has(period) || !offering?.subject) return;
       const subject = {
         key: String(offering.key || "").trim(),
@@ -375,7 +387,7 @@
     };
   }
 
-  const api = Object.freeze({ buildCurriculumModel, collectCurriculum, completeKnownPlan, curriculumFromOfferings, filterCurriculumPeriods, normalizeText, parseCurrentSchedule, parseCurriculumPeriod, requirementsFromSubjects });
+  const api = Object.freeze({ buildCurriculumModel, collectCurriculum, completeKnownPlan, curriculumFromOfferings, curriculumPeriodNumbers, filterCurriculumPeriods, normalizeText, parseCurrentSchedule, parseCurriculumPeriod, requirementsFromSubjects });
   globalScope.MISaesCurriculum = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

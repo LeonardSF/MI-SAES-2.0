@@ -34,6 +34,11 @@
     });
   }
 
+  function periodNumber(value) {
+    const number = Number(String(value ?? "").match(/\d+/u)?.[0]);
+    return Number.isInteger(number) && number > 0 ? number : null;
+  }
+
   function optionRecords(select) {
     return usefulOptions(select).map((option) => ({
       value: option.value,
@@ -262,6 +267,7 @@
       : [careerControls.radios.findIndex((radio) => radio.checked)].filter((index) => index >= 0);
     if (!modeIndexes.length) modeIndexes.push(0);
     const offeringMap = new Map();
+    const periodNumbers = new Set();
     let selectedPlan = "";
     let selectedMode = "";
 
@@ -287,11 +293,14 @@
           for (const periodOption of periodOptions) {
             const periodDoc = periodOption.value ? await selectDocument(planDoc, "period", periodOption.value, requestOptions) : planDoc;
             const finalControls = discoverControls(periodDoc);
+            const periodLabel = selectedLabel(finalControls.period) || periodOption.textContent.trim();
+            const detectedPeriod = periodNumber(periodLabel);
+            if (detectedPeriod) periodNumbers.add(detectedPeriod);
             const metadata = {
               career,
               shift: selectedLabel(finalControls.shift) || shiftOption.textContent.trim(),
               plan: selectedLabel(finalControls.plan) || planOption.textContent.trim(),
-              period: selectedLabel(finalControls.period) || periodOption.textContent.trim(),
+              period: periodLabel,
               mode: modeLabel
             };
             addOfferings(periodDoc, metadata, offeringMap, core);
@@ -313,11 +322,12 @@
       scannedAt: new Date().toISOString(),
       requests,
       combinationsScanned: leaves,
+      periodNumbers: [...periodNumbers].sort((left, right) => left - right),
       offerings: [...offeringMap.values()]
     };
   }
 
-  const api = Object.freeze({ discoverControls, usefulOptions, requestedOptions, configurationModel, loadConfiguration, tableModel, formActionUrl, scan });
+  const api = Object.freeze({ discoverControls, usefulOptions, requestedOptions, configurationModel, loadConfiguration, periodNumber, tableModel, formActionUrl, scan });
   globalScope.MISaesScanner = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

@@ -19,70 +19,146 @@
   margin-block: var(--space-xl);
   padding: var(--space-lg);
   border: var(--rule-thin) solid var(--color-rule-2);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   background: var(--color-surface);
   color: var(--color-ink);
   font-family: var(--font-body);
   line-height: 1.5;
 }
 
-.ms-trajectory-home-surface .ms-trajectory-progress {
+.ms-trajectory-home__header {
+  display: grid;
+  gap: var(--space-md);
+  align-items: start;
+}
+
+.ms-trajectory-home__intro .ms-heading,
+.ms-trajectory-home__intro .ms-lede,
+.ms-trajectory-home__actions .ms-helper {
+  margin: 0;
+}
+
+.ms-trajectory-home__intro .ms-lede {
+  max-width: 62ch;
+  margin-block-start: var(--space-2xs);
+}
+
+.ms-trajectory-home__actions {
+  display: grid;
+  gap: var(--space-2xs);
+  justify-items: stretch;
+  text-align: center;
+}
+
+.ms-trajectory-home__actions .ms-helper {
+  color: var(--color-neutral);
+  font-size: var(--text-xs);
+}
+
+.ms-trajectory-home__actions .ms-button {
+  width: 100%;
+}
+
+.ms-trajectory-home__hero {
+  display: grid;
+  min-width: 0;
   margin-block-start: var(--space-lg);
+  overflow: hidden;
+  border-block: var(--rule-thin) solid var(--color-rule);
+  background: var(--color-paper-2);
 }
 
-.ms-trajectory-home-surface .ms-trajectory-metrics {
+.ms-trajectory-home__hero .ms-trajectory-progress {
   grid-template-columns: 1fr;
-}
-
-.ms-trajectory-home-surface .ms-trajectory-metric,
-.ms-trajectory-home-surface .ms-trajectory-metric:nth-child(odd),
-.ms-trajectory-home-surface .ms-trajectory-metric:nth-child(even) {
-  padding-inline: 0;
-  border-inline-start: 0;
+  align-content: center;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: var(--space-lg);
   border-block-end: var(--rule-thin) solid var(--color-rule);
 }
 
-.ms-trajectory-home-surface .ms-trajectory-metric:last-child {
+.ms-trajectory-home__hero .ms-trajectory-progress__value {
+  font-size: clamp(2.75rem, 12cqw, 4.75rem);
+  font-weight: 700;
+  line-height: 0.95;
+}
+
+.ms-trajectory-home__hero .ms-progress-track {
+  grid-column: 1;
+}
+
+.ms-trajectory-home__hero .ms-trajectory-metrics {
+  grid-template-columns: 1fr;
+  margin: 0;
+  border: 0;
+  background: var(--color-surface);
+}
+
+.ms-trajectory-home__hero .ms-trajectory-metric,
+.ms-trajectory-home__hero .ms-trajectory-metric:nth-child(odd),
+.ms-trajectory-home__hero .ms-trajectory-metric:nth-child(even) {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border: 0;
+  border-block-end: var(--rule-thin) solid var(--color-rule);
+}
+
+.ms-trajectory-home__hero .ms-trajectory-metric:last-child {
   border-block-end: 0;
 }
 
+.ms-trajectory-home__hero .ms-trajectory-metric dd {
+  font-size: var(--text-md);
+}
+
 @container (min-width: 640px) {
-  .ms-trajectory-home-surface .ms-trajectory-metrics {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+  .ms-trajectory-home__header {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-lg);
   }
 
-  .ms-trajectory-home-surface .ms-trajectory-metric,
-  .ms-trajectory-home-surface .ms-trajectory-metric:nth-child(odd),
-  .ms-trajectory-home-surface .ms-trajectory-metric:nth-child(even) {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: var(--space-2xs);
-    padding: var(--space-sm) var(--space-md);
+  .ms-trajectory-home__actions {
+    justify-items: end;
+    text-align: end;
+  }
+
+  .ms-trajectory-home__actions .ms-button {
+    width: auto;
+  }
+
+  .ms-trajectory-home__hero {
+    grid-template-columns: minmax(240px, 0.85fr) minmax(0, 1.15fr);
+  }
+
+  .ms-trajectory-home__hero .ms-trajectory-progress {
     border-block-end: 0;
   }
 
-  .ms-trajectory-home-surface .ms-trajectory-metric:first-child {
-    padding-inline-start: 0;
-  }
-
-  .ms-trajectory-home-surface .ms-trajectory-metric + .ms-trajectory-metric {
+  .ms-trajectory-home__hero .ms-trajectory-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     border-inline-start: var(--rule-thin) solid var(--color-rule);
   }
 
-  .ms-trajectory-home-surface .ms-trajectory-metric dd {
-    text-align: start;
-  }
-}
-
-@container (max-width: 480px) {
-  .ms-trajectory-home-surface .ms-trajectory-metric,
-  .ms-trajectory-home-surface .ms-trajectory-metric:nth-child(odd),
-  .ms-trajectory-home-surface .ms-trajectory-metric:nth-child(even) {
+  .ms-trajectory-home__hero .ms-trajectory-metric,
+  .ms-trajectory-home__hero .ms-trajectory-metric:nth-child(odd),
+  .ms-trajectory-home__hero .ms-trajectory-metric:nth-child(even) {
     grid-template-columns: 1fr;
     gap: var(--space-2xs);
+    align-content: center;
+    padding: var(--space-md);
+    border-block-end: 0;
   }
 
-  .ms-trajectory-home-surface .ms-trajectory-metric dd {
+  .ms-trajectory-home__hero .ms-trajectory-metric:nth-child(even) {
+    border-inline-start: var(--rule-thin) solid var(--color-rule);
+  }
+
+  .ms-trajectory-home__hero .ms-trajectory-metric:nth-child(n + 3) {
+    border-block-start: var(--rule-thin) solid var(--color-rule);
+  }
+
+  .ms-trajectory-home__hero .ms-trajectory-metric dd {
     text-align: start;
   }
 }

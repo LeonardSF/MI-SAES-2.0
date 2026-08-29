@@ -51,7 +51,21 @@ test("descarta la preferencia heredada del asistente de evaluación", () => {
   assert.equal(Object.hasOwn(settings.modules, "evaluationAssist"), false);
 });
 
-test("describe las novedades verificadas de la versión 0.13.0", () => {
+test("describe las novedades verificadas de la versión 0.14.0", () => {
+  assert.deepEqual(core.releaseNotes("0.14.0"), {
+    version: "0.14.0",
+    title: "Tu avance académico, más claro",
+    items: [
+      "Explora tu mapa curricular por periodo y consulta materias aprobadas, cursando, no aprobadas y pendientes.",
+      "Revisa Mi trayectoria con un resumen visual más claro y su fecha de actualización.",
+      "Abre tu horario oficial en Mi Horario sin enviar tus materias a servidores de MI SAES.",
+      "Identifica mejor el proyecto, su versión instalada y sus enlaces de código abierto."
+    ],
+    releaseUrl: "https://github.com/LeonardSF/MI-SAES-2.0/releases/tag/v0.14.0"
+  });
+});
+
+test("conserva las novedades históricas de la versión 0.13.0", () => {
   assert.deepEqual(core.releaseNotes("0.13.0"), {
     version: "0.13.0",
     title: "MI SAES se actualizó",
@@ -69,13 +83,13 @@ test("describe las novedades verificadas de la versión 0.13.0", () => {
 test("crea un aviso sólo cuando Chrome actualiza a una versión con novedades", () => {
   assert.deepEqual(core.releaseNoticeForInstall({
     reason: "update",
-    previousVersion: "0.12.4",
-    currentVersion: "0.13.0"
+    previousVersion: "0.13.0",
+    currentVersion: "0.14.0"
   }), {
-    version: "0.13.0",
-    previousVersion: "0.12.4"
+    version: "0.14.0",
+    previousVersion: "0.13.0"
   });
-  assert.equal(core.releaseNoticeForInstall({ reason: "install", currentVersion: "0.13.0" }), null);
+  assert.equal(core.releaseNoticeForInstall({ reason: "install", currentVersion: "0.14.0" }), null);
   assert.equal(core.releaseNoticeForInstall({ reason: "update", currentVersion: "9.9.9" }), null);
 });
 
@@ -690,6 +704,9 @@ test("el escáner ignora opciones vacías y conserva periodos y turnos reales", 
     ]
   });
   assert.deepEqual(options.map((option) => option.value), ["M", "V"]);
+  assert.equal(scanner.periodNumber("Periodo 9"), 9);
+  assert.equal(scanner.periodNumber("9° semestre"), 9);
+  assert.equal(scanner.periodNumber("Seleccione"), null);
 });
 
 test("presenta Carrera, Plan y modo como una configuración dependiente", () => {

@@ -25,6 +25,17 @@
   const OCCUPANCY_REFRESH_MINUTES = Object.freeze([1, 2, 5, 10, 15]);
 
   const RELEASES = Object.freeze({
+    "0.14.0": Object.freeze({
+      version: "0.14.0",
+      title: "Tu avance académico, más claro",
+      items: Object.freeze([
+        "Explora tu mapa curricular por periodo y consulta materias aprobadas, cursando, no aprobadas y pendientes.",
+        "Revisa Mi trayectoria con un resumen visual más claro y su fecha de actualización.",
+        "Abre tu horario oficial en Mi Horario sin enviar tus materias a servidores de MI SAES.",
+        "Identifica mejor el proyecto, su versión instalada y sus enlaces de código abierto."
+      ]),
+      releaseUrl: "https://github.com/LeonardSF/MI-SAES-2.0/releases/tag/v0.14.0"
+    }),
     "0.13.0": Object.freeze({
       version: "0.13.0",
       title: "MI SAES se actualizó",
@@ -388,6 +399,60 @@
       });
     });
     return entries;
+  }
+
+  function parseStudentScheduleImport(tables = []) {
+    const importDays = Object.freeze({
+      lunes: "Lunes",
+      martes: "Martes",
+      miercoles: "Miercoles",
+      jueves: "Jueves",
+      viernes: "Viernes"
+    });
+
+    for (const table of tables) {
+      const headers = (table?.headers || []).map(normalizeText);
+      const groupIndex = headers.findIndex((header) => header === "grupo");
+      const subjectIndex = headers.findIndex((header) => /^(materia|asignatura|unidad de aprendizaje)$/.test(header));
+      const teacherIndex = headers.findIndex((header) => /^profesor(?:es)?$/.test(header));
+      const dayIndexes = Object.entries(importDays).map(([header, day]) => ({
+        day,
+        index: headers.findIndex((value) => value === header)
+      }));
+
+      if (groupIndex < 0 || subjectIndex < 0 || teacherIndex < 0 || dayIndexes.some(({ index }) => index < 0)) continue;
+
+      const classes = (table.rows || []).slice(0, 40).map((row) => {
+        const group = String(row[groupIndex] || "").replace(/\s+/g, " ").trim().slice(0, 24);
+        const rawSubject = String(row[subjectIndex] || "").replace(/\s+/g, " ").trim();
+        const subjectParts = rawSubject.match(/^([A-Z]{1,5}\d{2,4})\s*-\s*(.+)$/i);
+        const subjectCode = String(subjectParts?.[1] || "").trim().slice(0, 16);
+        const subject = String(subjectParts?.[2] || rawSubject).trim().slice(0, 160);
+        const teacher = String(row[teacherIndex] || "").replace(/\s+/g, " ").trim().slice(0, 120);
+        const days = Object.fromEntries(dayIndexes.map(({ day, index }) => {
+          const range = parseTimeRange(row[index]);
+          return [day, range ? `${formatMinutes(range.start)}-${formatMinutes(range.end)}` : "X"];
+        }));
+
+        if (!group || !subject || !teacher || Object.values(days).every((value) => value === "X")) return null;
+        return { group, subjectCode, subject, teacher, days };
+      }).filter(Boolean);
+
+      if (classes.length) return { version: 1, source: "mi-saes", classes };
+    }
+
+    return null;
+  }
+
+  function buildMiHorarioImportUrl(payload, baseUrl = "https://mihorarioesime.com/import") {
+    const json = JSON.stringify(payload);
+    const bytes = new TextEncoder().encode(json);
+    let binary = "";
+    bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+    const encoded = btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+    const url = new URL(baseUrl);
+    url.hash = `misaes=${encoded}`;
+    return url.toString();
   }
 
   function findScheduleConflicts(entries = []) {
@@ -790,6 +855,8 @@
     formatMinutes,
     canonicalDay,
     deriveScheduleEntries,
+    parseStudentScheduleImport,
+    buildMiHorarioImportUrl,
     deriveCourseOfferings,
     generateScheduleCombinations,
     plannerSubjectGroups,

@@ -225,6 +225,25 @@
     parent.append(list);
   }
 
+  function renderActions(document, parent, { model, loading, onRefresh, className = "ms-row ms-trajectory-actions" }) {
+    const actions = element(document, "div", className);
+    const refresh = element(document, "button", "ms-button ms-button--primary", loading ? "Actualizando…" : model.action);
+    refresh.type = "button";
+    refresh.disabled = loading;
+    if (loading) refresh.dataset.state = "loading";
+    refresh.addEventListener("click", onRefresh);
+    actions.append(refresh);
+    if (model.updatedAt) {
+      const updated = new Date(model.updatedAt);
+      if (Number.isFinite(updated.getTime())) {
+        const time = element(document, "time", "ms-helper", `Actualizado ${updated.toLocaleString("es-MX", { dateStyle: "medium", timeStyle: "short" })}`);
+        time.dateTime = updated.toISOString();
+        actions.append(time);
+      }
+    }
+    parent.append(actions);
+  }
+
   function renderDetails(document, parent, model) {
     if (!model.kardex && !model.status) return;
     const section = element(document, "section", "ms-trajectory-detail");
@@ -272,10 +291,22 @@
       ? sourceModels({ ...(snapshot?.sources || {}), [activity.source]: "loading" })
       : model.sources;
 
-    container.append(
-      element(document, "h2", "ms-heading", model.title),
-      element(document, "p", "ms-lede", loading ? activity.message : model.description)
-    );
+    if (embedded) {
+      const header = element(document, "header", "ms-trajectory-home__header");
+      const intro = element(document, "div", "ms-trajectory-home__intro");
+      intro.append(
+        element(document, "h2", "ms-heading", model.title),
+        element(document, "p", "ms-lede", loading ? activity.message : model.description)
+      );
+      header.append(intro);
+      renderActions(document, header, { model, loading, onRefresh, className: "ms-trajectory-home__actions" });
+      container.append(header);
+    } else {
+      container.append(
+        element(document, "h2", "ms-heading", model.title),
+        element(document, "p", "ms-lede", loading ? activity.message : model.description)
+      );
+    }
 
     if (["partial", "session-expired", "error"].includes(model.state)) {
       const notice = element(document, "div", `ms-notice ${model.state === "partial" ? "ms-notice--warning" : "ms-notice--error"}`);
@@ -283,8 +314,15 @@
       container.append(notice);
     }
 
-    renderProgress(document, container, model.progress);
-    renderMetrics(document, container, model.metrics);
+    if (embedded && (model.progress || model.metrics.length)) {
+      const hero = element(document, "section", "ms-trajectory-home__hero");
+      renderProgress(document, hero, model.progress);
+      renderMetrics(document, hero, model.metrics);
+      container.append(hero);
+    } else {
+      renderProgress(document, container, model.progress);
+      renderMetrics(document, container, model.metrics);
+    }
     if (embedded) {
       renderAttention(document, container, model.attention);
       renderEmbeddedDetails(document, container, model);
@@ -293,18 +331,7 @@
     }
     if (!embedded) renderSources(document, container, sources.length ? sources : sourceModels());
 
-    const actions = element(document, "div", "ms-row ms-trajectory-actions");
-    const refresh = element(document, "button", "ms-button ms-button--primary", loading ? "Actualizando…" : model.action);
-    refresh.type = "button";
-    refresh.disabled = loading;
-    if (loading) refresh.dataset.state = "loading";
-    refresh.addEventListener("click", onRefresh);
-    actions.append(refresh);
-    if (model.updatedAt) {
-      const updated = new Date(model.updatedAt);
-      actions.append(element(document, "span", "ms-helper", `Actualizado ${updated.toLocaleString("es-MX", { dateStyle: "medium", timeStyle: "short" })}`));
-    }
-    container.append(actions);
+    if (!embedded) renderActions(document, container, { model, loading, onRefresh });
   }
 
   const api = Object.freeze({ buildEmbeddedModel, buildModel, embeddedDetailFacts, render });

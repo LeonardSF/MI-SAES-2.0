@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img alt="Versión 0.13.0" src="https://img.shields.io/badge/versión-0.13.0-750946?style=flat-square">
+  <img alt="Versión 0.14.0" src="https://img.shields.io/badge/versión-0.14.0-750946?style=flat-square">
   <img alt="Licencia MIT" src="https://img.shields.io/badge/licencia-MIT-147D64?style=flat-square">
   <img alt="Chrome Manifest V3" src="https://img.shields.io/badge/Chrome-Manifest%20V3-750946?style=flat-square&logo=googlechrome&logoColor=white">
   <img alt="Pruebas aprobadas" src="https://img.shields.io/badge/pruebas-aprobadas-147D64?style=flat-square">
@@ -43,6 +43,8 @@ No sustituye al SAES, no modifica sus registros y no delega decisiones académic
 |---|---|
 | 🗓️ **Arma tu Horario** | Comparar grupos, mezclar periodos y turnos, detectar empalmes y generar hasta 30 horarios compatibles. |
 | 📚 **Mi trayectoria** | Reunir y presentar de manera clara el avance académico que reportan las páginas oficiales del SAES. |
+| 🧩 **Mapa curricular** | Explorar todos los periodos disponibles, cruzar el plan con Kárdex y horario actual, y filtrar materias por estado. |
+| 🔗 **Mi Horario** | Abrir el horario oficial en Mi Horario mediante una transferencia local incluida en la URL. |
 | 🪑 **Ocupabilidad** | Consultar cupo, inscritos y lugares disponibles. Si un grupo está lleno, sugiere alternativas compatibles. |
 | 📅 **Exportación** | Crear un calendario `.ics` con fecha de inicio y duración configurables. |
 | 🧭 **Horario preparado** | Conservar una selección como guía durante la reinscripción, sin marcar ni enviar materias automáticamente. |
@@ -78,6 +80,16 @@ En el inicio autenticado, MI SAES 2.0 puede presentar una lectura compacta del a
 
 La actualización puede conservar resultados parciales cuando alguna página no responde y siempre identifica qué fuente necesita reintentarse.
 
+## Mapa curricular
+
+La vista **Mapa curricular** organiza todos los periodos que SAES publica para el plan seleccionado —incluido un noveno periodo cuando la carrera lo contempla— y los cruza con el Kárdex y el horario actual. Presenta el avance por créditos cuando el SAES lo reporta, agrupa correctamente los requisitos optativos y permite filtrar materias aprobadas, cursando, no aprobadas o pendientes.
+
+Si alguna consulta falla, conserva la última lectura disponible y señala qué periodos necesitan actualizarse. La información permanece en el almacenamiento local de Chrome.
+
+## Integración con Mi Horario
+
+En el horario oficial del alumno aparece **Abrir en Mi Horario** cuando MI SAES reconoce una tabla utilizable. La extensión convierte grupos, materias, docentes y bloques semanales en un formato versionado y lo coloca en el fragmento de la URL de Mi Horario; ese fragmento no se envía como parte de la solicitud web.
+
 ## Cómo funciona
 
 ```mermaid
@@ -87,9 +99,13 @@ flowchart LR
     C --> D[Arma tu Horario]
     C --> E[Mi trayectoria]
     C --> F[Ocupabilidad]
+    C --> I[Mapa curricular]
+    C --> J[Mi Horario]
     D --> G[Preferencias y selección local]
     E --> G
     F --> G
+    I --> G
+    J --> G
     G --> H[Resultado dentro del navegador]
 
     classDef wine fill:#750946,color:#ffffff,stroke:#570635,stroke-width:2px

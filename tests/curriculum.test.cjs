@@ -202,16 +202,29 @@ test("filtra sin eliminar la agrupación por periodo", () => {
   ]);
 });
 
-test("convierte el catálogo de horarios en ocho periodos sin inventar créditos ni horas", () => {
+test("conserva todos los periodos detectados sin inventar créditos ni horas", () => {
   const snapshot = curriculum.curriculumFromOfferings([
     { subject: "Cálculo", key: "C101", source: { period: "1" } },
     { subject: "Cálculo", key: "C101", source: { period: "1" } },
-    { subject: "Física", source: { period: "2" } }
-  ], { updatedAt: "2026-08-26T20:00:00.000Z" });
+    { subject: "Física", source: { period: "2" } },
+    { subject: "Proyecto terminal", key: "P901", source: { period: "9" } }
+  ], {
+    updatedAt: "2026-08-26T20:00:00.000Z",
+    periodNumbers: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+  });
 
-  assert.equal(snapshot.periods.length, 8);
+  assert.deepEqual(snapshot.periods.map((period) => period.period), [1, 2, 3, 4, 5, 6, 7, 8, 9]);
   assert.deepEqual(snapshot.periods[0].subjects, [
     { key: "C101", name: "Cálculo", period: 1, credits: null, theoryHours: null, practiceHours: null }
   ]);
   assert.equal(snapshot.periods[7].subjects.length, 0);
+  assert.equal(snapshot.periods[8].subjects[0].name, "Proyecto terminal");
+});
+
+test("amplía el mapa cuando las materias revelan un periodo adicional", () => {
+  const snapshot = curriculum.curriculumFromOfferings([
+    { subject: "Proyecto terminal", source: { period: "9" } }
+  ]);
+
+  assert.deepEqual(snapshot.periods.map((period) => period.period), [1, 2, 3, 4, 5, 6, 7, 8, 9]);
 });
