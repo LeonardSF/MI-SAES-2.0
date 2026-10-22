@@ -11,7 +11,7 @@ Gracias por ayudar a que MI SAES 2.0 sea más claro, seguro y compatible con má
 
 ## Preparar el proyecto
 
-El proyecto usa Node.js 20 o superior y no necesita instalar dependencias.
+Usa una versión corregida de Node.js: 22.23.4 o posterior en la rama 22, o 24.22.1 o posterior en la rama 24. El archivo `.nvmrc` fija 24.22.1 como versión recomendada. El proyecto no necesita dependencias npm.
 
 ```bash
 git clone https://github.com/LeonardSF/MI-SAES-2.0.git
