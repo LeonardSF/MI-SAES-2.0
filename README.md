@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img alt="Versión 0.15.0" src="https://img.shields.io/badge/versión-0.15.0-750946?style=flat-square">
+  <img alt="Versión 0.15.1" src="https://img.shields.io/badge/versión-0.15.1-750946?style=flat-square">
   <img alt="Licencia MIT" src="https://img.shields.io/badge/licencia-MIT-147D64?style=flat-square">
   <img alt="Chrome Manifest V3" src="https://img.shields.io/badge/Chrome-Manifest%20V3-750946?style=flat-square&logo=googlechrome&logoColor=white">
   <img alt="Pruebas aprobadas" src="https://img.shields.io/badge/pruebas-aprobadas-147D64?style=flat-square">
@@ -48,14 +48,14 @@ No sustituye al SAES, no modifica sus registros y no delega decisiones académic
 | 🪑 **Ocupabilidad** | Consultar cupo, inscritos y lugares disponibles. Si un grupo está lleno, sugiere alternativas compatibles. |
 | 📅 **Exportación** | Crear un calendario `.ics` con fecha de inicio y duración configurables. |
 | 🧭 **Horario preparado** | Conservar una selección como guía durante la reinscripción, sin marcar ni enviar materias automáticamente. |
-| **Evaluación docente rápida** | Aplicar un perfil de respuestas sugeridas al cuestionario del SAES y revisarlas antes de enviarlo. |
+| ✏️ **Evaluación docente rápida** | Aplicar un perfil de respuestas sugeridas al cuestionario del SAES y revisarlas antes de enviarlo. |
 
 ## Evaluación docente rápida
 
 Desde la versión **0.15.0**, el botón **Evaluar rápido** aparece cuando MI SAES 2.0 reconoce el cuestionario de evaluación docente.
 
 1. Abre el cuestionario de un profesor en el SAES y pulsa **Evaluar rápido**.
-2. Elige **Malo**, **Bueno** o **Excelente** y confirma con **Aplicar perfil**.
+2. Elige **Malo**, **Bueno** o **Excelente** y selecciona qué quieres rellenar: desplegables, casillas o ambos. Pulsa **Aplicar perfil** cuando termine la cuenta regresiva de cinco segundos.
 3. Revisa las respuestas sugeridas en el formulario, ajusta las que necesites y pulsa **Aceptar** en el SAES cuando quieras enviar la evaluación.
 
 Las sugerencias se aplican al formulario abierto en el navegador. Tú decides qué respuestas enviar al SAES.

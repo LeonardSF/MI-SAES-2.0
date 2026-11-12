@@ -196,7 +196,7 @@ test("aplica los tres perfiles de evaluación y respeta la pregunta de lectura",
   const { port } = server.address();
   const { stdout } = await execFileAsync(chromePath, [
     "--headless=new", "--disable-gpu", "--no-sandbox", "--disable-extensions", "--disable-background-networking",
-    "--virtual-time-budget=2500", "--dump-dom",
+    "--virtual-time-budget=18000", "--dump-dom",
     `http://127.0.0.1:${port}/tests/fixtures/saes-evaluation.html?misaes-preview=1`
   ], { timeout: 5000, maxBuffer: 5 * 1024 * 1024 });
   assert.match(stdout, /<output id="evaluation-result">ready<\/output>/);

@@ -107,7 +107,7 @@
   const isStudentSchedulePage = /\/alumnos\/informacion_semestral\/horario_alumno\.aspx$/i.test(location.pathname)
     || (isLocalPreview && /\/saes-student-schedule\.html$/i.test(location.pathname));
   const isReenrollmentPage = /\/alumnos\/reinscripciones\//i.test(location.pathname) || context === "reenrollment";
-  const extensionVersion = chrome.runtime.getManifest?.().version || "0.15.0";
+  const extensionVersion = chrome.runtime.getManifest?.().version || "0.15.1";
   const launcherCopy = core.launcherModel({ authenticated: hasAuthenticatedSession });
   core.applyBannerBranding(document);
   let releaseNotice = storedState[releaseNoticeKey] || null;

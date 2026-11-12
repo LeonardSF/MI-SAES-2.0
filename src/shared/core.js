@@ -25,6 +25,15 @@
   const OCCUPANCY_REFRESH_MINUTES = Object.freeze([1, 2, 5, 10, 15]);
 
   const RELEASES = Object.freeze({
+    "0.15.1": Object.freeze({
+      version: "0.15.1",
+      title: "Más control al evaluar",
+      items: Object.freeze([
+        "Elige si el perfil rellena los desplegables, las casillas o ambos.",
+        "Confirma el perfil tras cinco segundos y revisa las respuestas antes de enviarlas."
+      ]),
+      releaseUrl: "https://github.com/LeonardSF/MI-SAES-2.0/releases/tag/v0.15.1"
+    }),
     "0.15.0": Object.freeze({
       version: "0.15.0",
       title: "Evaluación docente rápida",
