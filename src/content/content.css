@@ -46,6 +46,114 @@ textarea {
   display: none !important;
 }
 
+.ms-evaluation {
+  position: absolute;
+  inset-block-start: max(var(--space-md), env(safe-area-inset-top));
+  inset-inline-end: max(var(--space-md), env(safe-area-inset-right));
+  display: grid;
+  justify-items: end;
+  gap: var(--space-xs);
+  width: min(19rem, calc(100% - 2 * var(--space-md)));
+  pointer-events: none;
+}
+
+.ms-app[data-open="true"] .ms-evaluation {
+  display: none;
+}
+
+.ms-evaluation__launcher {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  max-width: 100%;
+  min-height: 56px;
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-lg);
+  color: var(--color-accent-ink);
+  background: var(--color-accent);
+  cursor: pointer;
+  pointer-events: auto;
+  text-align: start;
+}
+
+.ms-evaluation__launcher:hover,
+.ms-evaluation__launcher[aria-expanded="true"] {
+  background: var(--color-accent-hover);
+}
+
+.ms-evaluation__launcher:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
+.ms-evaluation__launcher img {
+  flex: none;
+  object-fit: contain;
+}
+
+.ms-evaluation__label {
+  display: grid;
+  gap: var(--space-2xs);
+  line-height: 1.1;
+}
+
+.ms-evaluation__label span {
+  font: 0.6875rem var(--font-wordmark);
+}
+
+.ms-evaluation__chevron {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-inline: var(--space-2xs);
+  border-inline-end: 2px solid currentColor;
+  border-block-end: 2px solid currentColor;
+  rotate: 45deg;
+}
+
+.ms-evaluation__launcher[aria-expanded="true"] .ms-evaluation__chevron {
+  rotate: 225deg;
+}
+
+.ms-evaluation__options {
+  width: 100%;
+  padding: var(--space-sm);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-raised);
+  box-shadow: 0 12px 32px var(--color-shadow);
+  pointer-events: auto;
+}
+
+.ms-evaluation__choices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-xs);
+}
+
+.ms-evaluation__choices .ms-button {
+  min-height: 44px;
+  padding-inline: var(--space-2xs);
+}
+
+.ms-evaluation__options p {
+  margin: var(--space-xs) 0 0;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}
+
+.ms-evaluation__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: end;
+  gap: var(--space-xs);
+  margin-block-start: var(--space-sm);
+}
+
+.ms-evaluation__actions .ms-button {
+  min-height: 44px;
+}
+
 .ms-launcher {
   position: absolute;
   inset-inline-end: max(var(--space-md), env(safe-area-inset-right));

@@ -24,8 +24,8 @@ test("documenta el salto de v0.13.0 a v0.14.0 para publicar la release", () => {
 test("sincroniza el README con la versión candidata", () => {
   const readme = read("README.md");
 
-  assert.match(readme, /alt="Versión 0\.14\.0"/);
-  assert.match(readme, /badge\/versión-0\.14\.0-/);
+  assert.match(readme, /alt="Versión 0\.15\.0"/);
+  assert.match(readme, /badge\/versión-0\.15\.0-/);
   assert.match(readme, /\*\*Mapa curricular\*\*/);
   assert.match(readme, /\*\*Mi Horario\*\*/);
   assert.doesNotMatch(readme, /ocho periodos/i);

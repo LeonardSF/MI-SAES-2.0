@@ -107,7 +107,7 @@
   const isStudentSchedulePage = /\/alumnos\/informacion_semestral\/horario_alumno\.aspx$/i.test(location.pathname)
     || (isLocalPreview && /\/saes-student-schedule\.html$/i.test(location.pathname));
   const isReenrollmentPage = /\/alumnos\/reinscripciones\//i.test(location.pathname) || context === "reenrollment";
-  const extensionVersion = chrome.runtime.getManifest?.().version || "0.14.0";
+  const extensionVersion = chrome.runtime.getManifest?.().version || "0.15.0";
   const launcherCopy = core.launcherModel({ authenticated: hasAuthenticatedSession });
   core.applyBannerBranding(document);
   let releaseNotice = storedState[releaseNoticeKey] || null;
@@ -181,6 +181,7 @@
     </section>
     <p class="ms-live" aria-live="polite" aria-atomic="true"></p>
   `;
+  globalThis.MISaesEvaluation?.mount(app, { isLocalPreview, normalizeText: core.normalizeText, announce });
   shadow.append(app);
   document.documentElement.append(host);
 

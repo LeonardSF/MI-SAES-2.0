@@ -15,6 +15,7 @@ const required = [
   "src/content/curriculum.js",
   "src/content/curriculum-view.js",
   "src/content/student-home.js",
+  "src/content/evaluation.js",
   "src/content/content.js",
   "src/content/content.css",
   "src/content/student-home.css",

@@ -16,27 +16,58 @@
     <main>
       <h1>Sistema de Administración Escolar · Evaluación docente</h1>
       <form id="evaluation-form">
-        <fieldset>
-          <legend>El profesor explica con claridad</legend>
-          <label><input type="radio" name="q1" value="1"> 1</label>
-          <label><input type="radio" name="q1" value="2"> 2</label>
-          <label><input type="radio" name="q1" value="3"> 3</label>
-          <label><input type="radio" name="q1" value="4"> 4</label>
-          <label><input type="radio" name="q1" value="5"> 5</label>
-        </fieldset>
-        <fieldset>
-          <legend>La retroalimentación fue oportuna</legend>
-          <label><input type="radio" name="q2" value="1"> 1</label>
-          <label><input type="radio" name="q2" value="2"> 2</label>
-          <label><input type="radio" name="q2" value="3"> 3</label>
-          <label><input type="radio" name="q2" value="4"> 4</label>
-          <label><input type="radio" name="q2" value="5"> 5</label>
-        </fieldset>
-        <button type="submit">Enviar evaluación</button>
+        <table>
+          <tr>
+            <td>8. Muestra conocimiento de los temas.</td>
+            <td><select id="ctl00_mainCopy_ctl08_Calificacion" name="respuesta08">
+              <option value=""></option>
+              <option value="20">SIEMPRE</option>
+              <option value="40">NUNCA</option>
+              <option value="60">A VECES</option>
+            </select></td>
+          </tr>
+          <tr>
+            <td>9. La forma en la que leo este cuestionario es precisa, por lo que forzosamente en esta pregunta debo seleccionar la opción “nunca”.</td>
+            <td><select id="ctl00_mainCopy_ctl09_Calificacion" name="respuesta09">
+              <option value=""></option>
+              <option value="20">SIEMPRE</option>
+              <option value="40">NUNCA</option>
+              <option value="60">A VECES</option>
+            </select></td>
+          </tr>
+          <tr>
+            <td>10. Promueve el análisis y la discusión.</td>
+            <td><select id="ctl00_mainCopy_ctl10_Calificacion" name="respuesta10">
+              <option value=""></option>
+              <option value="20">SIEMPRE</option>
+              <option value="40">NUNCA</option>
+              <option value="60">A VECES</option>
+            </select></td>
+          </tr>
+        </table>
+        <table id="ctl00_mainCopy_DG_PregsV2_E2_P1_CheckList">
+          <tr><td><input type="checkbox" name="video"></td><td>Sistemas de video proyección</td></tr>
+          <tr><td><input type="checkbox" name="plataformas"></td><td>Plataformas digitales</td></tr>
+        </table>
+        <label><input type="checkbox" id="ctl00_mainCopy_Chk_Ninguna_E2_P1" name="ninguna"> Ninguna de las anteriores</label>
+        <table id="ctl00_mainCopy_DG_PregsV2_E2_P2_CheckList">
+          <tr><td><input type="checkbox" name="ejercicios"></td><td>Solución de problemas y/o ejercicios</td></tr>
+          <tr><td><input type="checkbox" name="equipo" checked></td><td>Trabajo en equipo</td></tr>
+        </table>
+        <label><input type="checkbox" id="ctl00_mainCopy_Chk_Ninguna_E2_P2" name="ningunaActividades"> Ninguna de las anteriores</label>
+        <label>Comentario <textarea>Comentario de prueba</textarea></label>
+        <button type="submit">Aceptar</button>
       </form>
     </main>
     <script src="/tests/fixtures/chrome-mock.js"></script>
     <script src="/src/shared/core.js"></script>
+    <script src="/src/content/trajectory.js"></script>
+    <script src="/src/content/trajectory-view.js"></script>
+    <script src="/src/content/curriculum.js"></script>
+    <script src="/src/content/curriculum-view.js"></script>
+    <script src="/src/content/student-home.js"></script>
+    <script src="/src/content/evaluation.js"></script>
     <script src="/src/content/content.js"></script>
+    <script src="/tests/fixtures/evaluation-preview.js"></script>
   </body>
 </html>
