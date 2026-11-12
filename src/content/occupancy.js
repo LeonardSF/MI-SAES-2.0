@@ -15,11 +15,23 @@
     return match ? Number(match[0]) : null;
   }
 
+  const recordIndexes = new WeakMap();
+
   function findRecord(records, offering) {
     const group = normalize(offering?.group);
     const subject = normalize(offering?.subject);
     if (!group || !subject || !Array.isArray(records)) return null;
-    return records.find((record) => normalize(record.group) === group && normalize(record.subject) === subject) || null;
+    // Cada actualización reemplaza el arreglo completo del catálogo.
+    let index = recordIndexes.get(records);
+    if (!index) {
+      index = new Map();
+      for (const record of records) {
+        const key = JSON.stringify([normalize(record.group), normalize(record.subject)]);
+        if (!index.has(key)) index.set(key, record);
+      }
+      recordIndexes.set(records, index);
+    }
+    return index.get(JSON.stringify([group, subject])) || null;
   }
 
   function markUrl(doc, url) {

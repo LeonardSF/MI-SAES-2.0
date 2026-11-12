@@ -318,16 +318,17 @@
   }
 
   function syncScheduleAvailabilityColumn() {
-    const cells = document.querySelectorAll("[data-misaes-availability-column]");
     if (!isOfferingsCatalog || !occupancyEnabled) {
-      cells.forEach((cell) => cell.remove());
+      document.querySelectorAll("[data-misaes-availability-column]").forEach((cell) => cell.remove());
       return;
     }
 
     [...document.querySelectorAll("table")].filter((table) => !host.contains(table)).forEach((table) => {
       const rows = [...table.rows];
       if (rows.length < 2) return;
-      const headers = [...rows[0].cells].map((cell) => core.normalizeText(cell.textContent));
+      const headers = [...rows[0].cells]
+        .filter((cell) => !cell.hasAttribute("data-misaes-availability-column"))
+        .map((cell) => core.normalizeText(cell.textContent));
       const groupIndex = headers.findIndex((header) => /^grupo$/.test(header));
       const subjectIndex = headers.findIndex((header) => /^(asignatura|materia)$/.test(header));
       const roomIndex = headers.findIndex((header) => /^salon$/.test(header));
@@ -343,13 +344,15 @@
       }
 
       rows.slice(1).forEach((row) => {
-        const group = row.cells[groupIndex]?.textContent?.trim() || "";
-        const subject = row.cells[subjectIndex]?.textContent?.trim() || "";
         let cell = row.querySelector('[data-misaes-availability-column="cell"]');
+        const originalCells = [...row.cells].filter((original) => original !== cell);
+        const group = originalCells[groupIndex]?.textContent || "";
+        const subject = originalCells[subjectIndex]?.textContent || "";
+        if (!group.trim() || !subject.trim()) return;
         if (!cell) {
           cell = document.createElement("td");
           cell.dataset.misaesAvailabilityColumn = "cell";
-          row.insertBefore(cell, row.cells[roomIndex + 1] || null);
+          row.insertBefore(cell, originalCells[roomIndex + 1] || null);
         }
         const record = occupancyFor({ group, subject });
         cell.textContent = record ? String(record.available) : "—";
@@ -382,45 +385,51 @@
       scheduleOccupancyRefresh(interval - age);
       return;
     }
-    occupancyController = new AbortController();
+    const controller = new AbortController();
+    occupancyController = controller;
     refreshOccupancyView?.({ state: "loading" });
     try {
       const result = await globalThis.MISaesOccupancy.scan({
         url: occupancyUrl(),
         career: scanCatalog?.career || visibleCareer,
         plan: visiblePlan || scanCatalog?.offerings?.find((item) => item.source?.plan)?.source?.plan || "",
-        signal: occupancyController.signal
+        signal: controller.signal
       });
+      if (controller.signal.aborted) return;
       occupancyCatalog = result;
       await storage.set({ [occupancyKey]: result });
+      if (controller.signal.aborted) return;
       syncScheduleAvailabilityColumn();
       refreshOccupancyView?.({ state: "ready" });
       announce(`Ocupabilidad actualizada: ${result.records.length} grupos`);
     } catch (error) {
-      if (error?.name !== "AbortError") {
+      if (!controller.signal.aborted && error?.name !== "AbortError") {
         refreshOccupancyView?.({ state: "error", message: error?.message || "No fue posible actualizar los lugares." });
         announce(error?.message || "No fue posible actualizar la ocupabilidad");
       }
     } finally {
-      occupancyController = null;
-      scheduleOccupancyRefresh();
+      if (occupancyController === controller) {
+        occupancyController = null;
+        scheduleOccupancyRefresh();
+      }
     }
   }
 
   async function setOccupancyEnabled(nextEnabled) {
     occupancyEnabled = Boolean(nextEnabled);
     syncScheduleAvailabilityColumn();
-    await storage.set({ [occupancyPreferenceKey]: occupancyEnabled });
+    const savePreference = storage.set({ [occupancyPreferenceKey]: occupancyEnabled });
     if (!occupancyEnabled) {
       clearTimeout(occupancyTimer);
       occupancyController?.abort();
       occupancyController = null;
       refreshOccupancyView?.({ state: "disabled" });
       announce("Actualización de lugares desactivada");
-      return;
+      return savePreference;
     }
     announce("Actualización de lugares activada");
     refreshOccupancy({ force: true }).catch(() => {});
+    return savePreference;
   }
 
   async function setOccupancyRefreshMinutes(nextMinutes) {
@@ -1338,6 +1347,7 @@
         const cleared = await core.clearScannedScheduleData(storage, { catalogKey, plannerKey, occupancyKey });
         scanCatalog = cleared.scanCatalog;
         occupancyCatalog = cleared.occupancyCatalog;
+        syncScheduleAvailabilityColumn();
         plannerSelection = new Set(cleared.plannerSelection);
         generatedSchedules = cleared.generatedSchedules;
         activeGeneratedSchedule = cleared.activeGeneratedSchedule;
