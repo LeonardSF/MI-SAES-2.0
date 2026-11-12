@@ -48,6 +48,17 @@ No sustituye al SAES, no modifica sus registros y no delega decisiones académic
 | 🪑 **Ocupabilidad** | Consultar cupo, inscritos y lugares disponibles. Si un grupo está lleno, sugiere alternativas compatibles. |
 | 📅 **Exportación** | Crear un calendario `.ics` con fecha de inicio y duración configurables. |
 | 🧭 **Horario preparado** | Conservar una selección como guía durante la reinscripción, sin marcar ni enviar materias automáticamente. |
+| **Evaluación docente rápida** | Aplicar un perfil de respuestas sugeridas al cuestionario del SAES y revisarlas antes de enviarlo. |
+
+## Evaluación docente rápida
+
+Desde la versión **0.15.0**, el botón **Evaluar rápido** aparece cuando MI SAES 2.0 reconoce el cuestionario de evaluación docente.
+
+1. Abre el cuestionario de un profesor en el SAES y pulsa **Evaluar rápido**.
+2. Elige **Malo**, **Bueno** o **Excelente** y confirma con **Aplicar perfil**.
+3. Revisa las respuestas sugeridas en el formulario, ajusta las que necesites y pulsa **Aceptar** en el SAES cuando quieras enviar la evaluación.
+
+Las sugerencias se aplican al formulario abierto en el navegador. Tú decides qué respuestas enviar al SAES.
 
 ## Arma tu Horario
 
@@ -130,6 +141,7 @@ MI SAES 2.0 está construido con JavaScript, HTML y CSS nativos. No hay framewor
 | Núcleo funcional | Normaliza texto, interpreta horarios, detecta traslapes, genera combinaciones y exporta calendarios. | `src/shared/core.js` |
 | Adaptadores SAES | Reconstruyen formularios ASP.NET Web Forms y hacen consultas secuenciales al mismo plantel. | `scanner.js` `occupancy.js` `trajectory.js` |
 | Presentación | Inyecta una aplicación aislada mediante Shadow DOM sin rediseñar la página original. | `src/content/content.js` y archivos CSS |
+| Evaluación docente | Reconoce el cuestionario y aplica el perfil confirmado en los controles del formulario. | `src/content/evaluation.js` |
 | Superficies Chrome | Presentan el acceso rápido y los ajustes locales. | `popup/` y `options/` |
 | Contratos automatizados | Cubren parsers, generación de horarios, estados parciales, privacidad y estructura del manifiesto. | `tests/` y `scripts/check.cjs` |
 
@@ -281,7 +293,7 @@ MI-SAES-2.0/
 ├── popup/               # Acceso rápido de la extensión
 ├── scripts/             # Verificación y empaquetado
 ├── src/
-│   ├── content/         # Panel, horario, ocupabilidad y trayectoria
+│   ├── content/         # Panel, horario, ocupabilidad, trayectoria y evaluación
 │   ├── shared/          # Lógica reutilizable y notas de versión
 │   └── background.js    # Ciclo de vida y actualizaciones
 ├── tests/               # Pruebas y páginas de ejemplo
